@@ -32,6 +32,7 @@
 *.app
 
 # Visual Studio project and solutions
+.vs/**
 *.sln
 *.vcxproj
 *.vcxproj.user
