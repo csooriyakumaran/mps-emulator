@@ -1,6 +1,9 @@
 #ifndef _MPS_H_
 #define _MPS_H_
 
+#include <stdint.h>
+
+
 namespace mps
 {
 
@@ -23,6 +26,13 @@ struct BinaryPacket
         uint32_t frame_time_ns;
         uint32_t external_trigger_time_s;
         uint32_t external_trigger_time_ns;
+};
+
+struct ScannerConfig
+{
+    uint32_t serial_number;
+    float frame_rate:
+
 };
 
 } // namespace mps

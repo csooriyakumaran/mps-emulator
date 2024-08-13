@@ -7,6 +7,7 @@ workspace "mps-emulator"
 outputdir = "%{cfg.buildcfg}-%{cfg.system}-%{cfg.architecture}"
 
 group "core"
+    include "aerolib"
 group ""
 
 group "dependencies" 

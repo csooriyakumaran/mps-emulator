@@ -15,11 +15,13 @@ project "mps-server"
     
     includedirs
     {  
-        "src", 
+        "src",
+        "../aerolib/src"
     }
 
     links
     {
+        "aerolib"
     }
     
     defines
