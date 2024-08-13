@@ -34,6 +34,8 @@
 # Visual Studio project and solutions
 *.sln
 *.vcxproj
+*.vcxproj.user
+*.vcxproj.filters
 
 # build and output directories
 **/build/
