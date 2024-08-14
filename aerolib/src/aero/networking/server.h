@@ -1,6 +1,20 @@
 #ifndef _AERO_NETWORKING_H_
 #define _AERO_NETWORKING_H_
+/* ----------------------------------------------------------------------------
+    AEROLIB
+    -------
+    aero/netowrking/server.h
 
+    The server class is an abstraction around the system calls for networking
+    sockets. Runs an listening thread to accept multiple clients, and send and
+    receive data from all.
+
+
+    Author:         C.Sooriyakumaran
+    Change log:
+                    [15-08-2024] Initial Release
+
+/ -------------------------------------------------------------------------- */
 #include <functional>
 #include <map>
 #include <stdint.h>
@@ -25,9 +39,9 @@ struct ClientInfo
 class TcpServer
 {
 public:
-    using DataReceivedCallback     = std::function<void(const ClientInfo&, const Buffer)>;
-    using ClientConnectCallback    = std::function<void(const ClientInfo&)>;
-    using ClientDisconnectCallback = std::function<void(const ClientInfo&)>;
+    using DataReceivedFn     = std::function<void(const ClientInfo&, const Buffer)>;
+    using ClientConnectFn    = std::function<void(const ClientInfo&)>;
+    using ClientDisconnectFn = std::function<void(const ClientInfo&)>;
 
 public:
     TcpServer() {}
@@ -35,6 +49,14 @@ public:
 
     void Start();
     void Stop();
+
+    //---- S E T - C A L L B A C K S ------------------------------------------
+
+    void SetDataRecvCallback(const DataReceivedFn& fn) { m_DataReceivedCallback = fn; }
+    void SetClientConCallback(const ClientConnectFn& fn) { m_ClientConnectCallback = fn; }
+    void SetClientDisconCallback(const ClientDisconnectFn& fn) { m_ClientDisconnectCallback = fn; }
+
+    //---- S E N D - D A T A --------------------------------------------------
 
     void SendBufferToClient(ClientID client, Buffer buff);
     void SendBufferToAll(Buffer buff, ClientID exclude = 0);
@@ -51,8 +73,7 @@ public:
         SendBufferToAll(Buffer(&data, sizeof(T)), exclude);
     }
 
-
-
+    //------------------------------------------------------------------------
     void KickClient(ClientID client);
 
     bool IsRunning() const { return m_running; }
@@ -67,9 +88,9 @@ private:
     bool m_running = false;
     SOCKET socket  = 0u;
 
-    DataReceivedCallback m_DataReceivedCallback;
-    ClientConnectCallback m_ClientConnectCallback;
-    ClientDisconnectCallback m_ClientDisconnectCallback;
+    DataReceivedFn m_DataReceivedCallback;
+    ClientConnectFn m_ClientConnectCallback;
+    ClientDisconnectFn m_ClientDisconnectCallback;
 };
 
 } // namespace aero::networking
