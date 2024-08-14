@@ -31,7 +31,7 @@ struct BinaryPacket
 struct ScannerConfig
 {
     uint32_t serial_number;
-    float frame_rate:
+    float frame_rate;
 
 };
 

@@ -1,8 +1,22 @@
-#include <iostream>
+#ifndef _MPS_EMULATOR_H_
+#define _MPS_EMULATOR_H_
 
-#include "mps-emulator.h"
+#include "aero/core/application.h"
+#include "aero/core/entrypoint.h"
 
-mps::App::App() {}
-mps::App::~App() {}
+#include "server-layer.h"
 
-void mps::App::Run() { std::cout << "Hello, World\n"; }
+aero::Application* aero::CreateApplication(int argc, char** argv)
+{
+    aero::AppSpec spec;
+    spec.Name = "MPS Emulator";
+    spec.SleepMilliseconds = 0;
+
+    aero::Application* app = new aero::Application(spec);
+    app->PushLayer<ServerLayer>();
+
+    return app;
+}
+
+
+#endif // _MPS_EMULATOR_H_
