@@ -2,6 +2,7 @@
 #define _AERO_NETWORKING_H_
 
 #include <functional>
+#include <map>
 #include <stdint.h>
 #include <string>
 
@@ -11,16 +12,9 @@
 namespace aero::networking
 {
 
-enum class SocketType : uint16_t
-{
-    TCP = 0,
-    UDP,
-    _COUNT
-};
+typedef uint32_t ClientID;
 
-static std::string SocketTypes[(size_t)SocketType::_COUNT] = {"TCP", "UDP"};
-
-struct ServerInfo
+struct ClientInfo
 {
     std::string host     = "127.0.0.1";
     uint16_t port        = 65432;
@@ -30,28 +24,52 @@ struct ServerInfo
 
 class TcpServer
 {
-    public:
-    using DataReceivedCallback     = std::function<void(const ServerInfo&, const Buffer)>;
-    using ClientConnectCallback    = std::function<void(const ServerInfo&)>;
-    using ClientDisconnectCallback = std::function<void(const ServerInfo&)>;
+public:
+    using DataReceivedCallback     = std::function<void(const ClientInfo&, const Buffer)>;
+    using ClientConnectCallback    = std::function<void(const ClientInfo&)>;
+    using ClientDisconnectCallback = std::function<void(const ClientInfo&)>;
 
-    public:
+public:
     TcpServer() {}
     ~TcpServer() {}
 
     void Start();
     void Stop();
-    void SendData();
+
+    void SendBufferToClient(ClientID client, Buffer buff);
+    void SendBufferToAll(Buffer buff, ClientID exclude = 0);
+
+    template<typename T>
+    void SendDataToClient(ClientID client, const T& data)
+    {
+        SendBufferToClient(client, Buffer(&data, sizeof(T)));
+    }
+
+    template<typename T>
+    void SendDataToAll(const T& data, ClientID exclude)
+    {
+        SendBufferToAll(Buffer(&data, sizeof(T)), exclude);
+    }
+
+
+
+    void KickClient(ClientID client);
+
+    bool IsRunning() const { return m_running; }
+
+private:
     void RecvData();
     void AcceptClients();
     void HandleConnection();
 
-    std::string GetSocketType() { return SocketTypes[(size_t)info.type]; }
+private:
+    std::map<ClientID, ClientInfo> m_Clients;
+    bool m_running = false;
+    SOCKET socket  = 0u;
 
-    private:
-    ServerInfo info = {};
-    bool running    = false;
-    SOCKET socket   = 0u;
+    DataReceivedCallback m_DataReceivedCallback;
+    ClientConnectCallback m_ClientConnectCallback;
+    ClientDisconnectCallback m_ClientDisconnectCallback;
 };
 
 } // namespace aero::networking
