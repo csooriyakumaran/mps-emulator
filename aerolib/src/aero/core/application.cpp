@@ -4,7 +4,9 @@
 #include <iostream>
 #include <thread>
 
-#include <Windows.h>
+/*#include <Windows.h>*/
+
+#include "aero/core/log.h"
 
 extern bool g_ApplicationRunning;
 
@@ -16,7 +18,14 @@ aero::Application::Application(const aero::AppSpec& spec)
     s_Instance = this;
 }
 
-aero::Application::~Application() { s_Instance = nullptr; }
+aero::Application::~Application()
+{
+    s_Instance = nullptr;
+    for (auto& layer : m_LayerStack)
+        layer->OnDetach();
+
+    m_LayerStack.clear();
+}
 
 aero::Application& aero::Application::Get() { return *s_Instance; }
 
@@ -31,20 +40,13 @@ void aero::Application::Shutdown()
     g_ApplicationRunning = false;
 }
 
-void aero::Application::Restart()
-{
-    for (auto& layer : m_LayerStack)
-        layer->OnDetach();
-
-    m_LayerStack.clear();
-    m_Running = false;
-}
+void aero::Application::Restart() { m_Running = false; }
 
 void aero::Application::Run()
 {
     m_Running = true;
 
-    std::cout << "[ APP  ] Starting the main loop ....\n";
+    LOG_DEBUG_TAG("APPLICATION", "Starting the main application loop");
 
     //- main loop
     while (m_Running)
@@ -60,15 +62,6 @@ void aero::Application::Run()
         float time      = m_AppTimer.Elapsed();
         m_FrameTime     = time - m_LastFrameTime;
         m_LastFrameTime = time;
-
-        int cols = 100;
-        /*CONSOLE_SCREEN_BUFFER_INFO csbi;*/
-        /*int cols, rows;*/
-        /*GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &csbi);*/
-        /*cols             = csbi.srWindow.Right - csbi.srWindow.Left + 1;*/
-        /*rows             = csbi.srWindow.Bottom - csbi.srWindow.Top + 1;*/
-
-        float frame_rate = 1.0f / m_FrameTime;
-        /*std::cout << std::setw(cols) << std::right << frame_rate << "\r";*/
     }
+    LOG_DEBUG_TAG("APPLICATION", "Stopping the main application loop");
 }

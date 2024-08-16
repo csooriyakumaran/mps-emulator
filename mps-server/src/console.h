@@ -1,23 +1,30 @@
 #ifndef _MPS_EMULATOR_CONSOLE_H
 #define _MPS_EMULATOR_CONSOLE_H
 
-#include <format>
-#include <iostream>
-#include <string>
+#include <functional>
 #include <string_view>
+#include <thread>
+
 
 class Console
 {
 public:
-    Console() {}
-    ~Console() {}
+    using MessageCallback = std::function<void(std::string_view)>;
 
-    template<typename... Args>
-    void AddTaggedMsg(std::string_view tag, std::string_view format, Args&&... args)
-    {
-        std::string msg = std::vformat(format, std::make_format_args(args...));
-        std::cout << "[ " << tag << " ] " << msg << std::endl;
-    }
-    void InputThread();
+public:
+    Console();
+    ~Console();
+
+
+    void SetMessageCallback(const MessageCallback& fn) { m_MessageCallback = fn; }
+
+private:
+    void InputThreadFn();
+
+    std::jthread m_InputThread;
+
+    bool m_InputThreadRunning  = false;
+
+    MessageCallback m_MessageCallback = nullptr;
 };
 #endif // _MPS_EMULATOR_CONSOLE_H

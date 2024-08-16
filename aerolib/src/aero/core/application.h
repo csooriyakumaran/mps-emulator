@@ -27,12 +27,13 @@ public:
 
     void Run();
     void Restart();
+    void Shutdown();
 
-    template<typename T>
-    void PushLayer()
+    template<typename T, typename...Args>
+    void PushLayer(Args&&... args)
     {
         static_assert(std::is_base_of<Layer, T>::value, "Pushed layer is not subclass of Layer");
-        m_LayerStack.emplace_back(std::make_shared<T>())->OnAttach();
+        m_LayerStack.emplace_back(std::make_shared<T>(std::forward<Args>(args)...))->OnAttach();
     }
     void PushLayer(const std::shared_ptr<Layer>& layer)
     {
@@ -40,9 +41,10 @@ public:
         layer->OnAttach();
     }
 
+    float FrameRate() { return 1.0f / m_FrameTime; }
+
 private:
     void Init();
-    void Shutdown();
 
 private:
     AppSpec m_Specification;
@@ -50,6 +52,7 @@ private:
 
     float m_FrameTime     = 0.0f;
     float m_LastFrameTime = 0.0f;
+    float m_FrameRate     = 0.0f;
 
     Timer m_AppTimer;
 

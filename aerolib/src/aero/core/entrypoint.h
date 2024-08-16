@@ -3,6 +3,7 @@
 
 #include <iostream>
 #include "aero/core/application.h"
+#include "aero/core/log.h"
 
 extern aero::Application* aero::CreateApplication(int argc, char** argv);
 bool g_ApplicationRunning = true;
@@ -13,19 +14,15 @@ namespace mps
 int Main(int argc, char **argv)
 {
 
-    std::cout << "[ CORE ] Startup......\n";
-
-    // LOG::Init()
-
     while (g_ApplicationRunning)
     {
         aero::Application* app = aero::CreateApplication(argc, argv);
+        if (!app)
+            break;
         app->Run();
         delete(app);
     }
-    std::cout << "[ CORE ] Shutdown......\n";
 
-    // LOG::Shutdown()
     return 0;
 }
 

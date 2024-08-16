@@ -1,5 +1,5 @@
-#ifndef _AERO_NETWORKING_H_
-#define _AERO_NETWORKING_H_
+#ifndef _AERO_NETWORKING_SERVER_H_
+#define _AERO_NETWORKING_SERVER_H_
 /* ----------------------------------------------------------------------------
     AEROLIB
     -------
@@ -21,12 +21,13 @@
 #include <string>
 
 #include "aero/core/buffer.h"
+#include "aero/core/threads.h"
 #include "aero/networking/socket.h"
+
+typedef uint32_t ClientID;
 
 namespace aero::networking
 {
-
-typedef uint32_t ClientID;
 
 struct ClientInfo
 {
@@ -36,7 +37,22 @@ struct ClientInfo
     uint32_t buffer_size = 4096;
 };
 
-class TcpServer
+struct ServerInfo
+{
+    std::string name     = "Server";
+    size_t workers       = 1;
+    uint16_t port        = 0u;
+    SocketType type      = SocketType::TCP;
+    uint32_t buffer_size = 4096;
+};
+
+struct Transmittal
+{
+    ClientID id;
+    Buffer data;
+
+};
+class Server
 {
 public:
     using DataReceivedFn     = std::function<void(const ClientInfo&, const Buffer)>;
@@ -44,8 +60,8 @@ public:
     using ClientDisconnectFn = std::function<void(const ClientInfo&)>;
 
 public:
-    TcpServer() {}
-    ~TcpServer() {}
+    Server(const ServerInfo& info);
+    ~Server();
 
     void Start();
     void Stop();
@@ -58,8 +74,10 @@ public:
 
     //---- S E N D - D A T A --------------------------------------------------
 
-    void SendBufferToClient(ClientID client, Buffer buff);
+    void SendBufferToClient(ClientID id, Buffer buff);
     void SendBufferToAll(Buffer buff, ClientID exclude = 0);
+    void SendStringToClient(ClientID id, const std::string& msg);
+    void SendStringToAll(const std::string& msg, ClientID exclude = 0);
 
     template<typename T>
     void SendDataToClient(ClientID client, const T& data)
@@ -68,7 +86,7 @@ public:
     }
 
     template<typename T>
-    void SendDataToAll(const T& data, ClientID exclude)
+    void SendDataToAll(const T& data, ClientID exclude = 0)
     {
         SendBufferToAll(Buffer(&data, sizeof(T)), exclude);
     }
@@ -76,23 +94,30 @@ public:
     //------------------------------------------------------------------------
     void KickClient(ClientID client);
 
-    bool IsRunning() const { return m_running; }
+    bool IsRunning() const { return m_Running; }
 
 private:
+    void SendDataThreadFn();
+
     void RecvData();
-    void AcceptClients();
-    void HandleConnection();
+    void AcceptClientsThreadFn();
+    void HandleConnectionThreadFn();
 
 private:
+    ServerInfo m_ServerInfo;
+
     std::map<ClientID, ClientInfo> m_Clients;
-    bool m_running = false;
-    SOCKET socket  = 0u;
+    std::queue<Transmittal> m_SendBufferQueue;
+    bool m_Running  = false;
+    Socket m_Socket = 0u;
 
     DataReceivedFn m_DataReceivedCallback;
     ClientConnectFn m_ClientConnectCallback;
     ClientDisconnectFn m_ClientDisconnectCallback;
+
+    ThreadPool m_Threads;
 };
 
 } // namespace aero::networking
 
-#endif // _AERO_NETWORKING_H_
+#endif // _AERO_NETWORKING_SERVER_H_

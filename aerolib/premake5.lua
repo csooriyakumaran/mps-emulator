@@ -33,6 +33,7 @@ project "aerolib"
     filter "system:windows"
         systemversion "latest"
         defines "PLATFORM_WINDOWS"
+        links { "Ws2_32" }
 
     filter  "configurations:Debug" 
         defines { "DEBUG" }

@@ -42,5 +42,5 @@ project "mps-server"
 
     filter  "configurations:Release"
         defines { "RELEASE" }
-        optimize "On"
+        optimize "Full"
 
