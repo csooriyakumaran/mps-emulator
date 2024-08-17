@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="generator" content="CoffeeCup HTML Editor (www.coffeecup.com)">
+    <meta name='date' content="2016 Jan, 20 2:49 PM">
+    <meta name="description" content="">
+    <meta name="keywords" content="">
+    <title>Data Bar</title>
+
+
+  	<style type="text/css">
+	.tftable {font-size:10px;color:#333333;width: 98%; border-width: 1px;border-color: #729ea5;border-collapse: collapse;}
+	.tftable th {font-size:10px;background-color: white;border-width: 1px;padding: 3px;border-style: solid;border-color: #729ea5;text-align:left;}
+	.tftable tr:nth-child(odd) {background-color: rgb(231,231,231);} 
+	.tftable tr:nth-child(even) {background-color: #B3C8E4;}
+	.tftable td {font-size:10px;border-width: 0px;  border-left: 1px; border-right: 1px; padding: 1px;border-style: solid;border-color: #729ea5;text-align:center;}
+	.tftable tr:hover {background-color:#ffffff;}
+	.tftable .left {text-align:left;}
+	.tftable .right {text-align:right;}
+	.tftable .center {text-align:center;}
+	
+	#cmdarea
+	{
+	font-size:12px;background-color:#acc8cc;width: 98.4%;border-width: 1px;padding: 2px;border-style: solid;border-color: #729ea5;text-align:left;
+	}
+
+	.content{
+		height:450px;
+	} 
+
+	</style>
+
+  <script language="JavaScript">
+  
+  var iTimer = null;
+  var SConnect;
+  var StartScanConnect;
+  var StopScanConnect;
+  var dp = 4;  // Decimel points to hold
+  var SSFlag = 0; // When set to 1 starts scan (used globally)
+  var mx1 = 1; // Max min values for 
+  var mx2 = 1;
+  var mn1 = -1;
+  var mn2 = -1;
+  var tms = '|';
+  var tmv = 1;
+  var maxbarchar = 65;
+	var unitsval;
+	var CalzConnect;
+  
+	function jload() {
+  	getTick();
+   
+		LoadSConnect();
+		LoadStartScanConnect();
+		LoadStopScanConnect();
+		MakeDataSConnect();
+  	SSFlag = 0;
+		GetStartScanConnect();
+  	LoadCalzConnect();
+	} // End jload function
+
+		// Create a connection to the server for stop scan.
+		function LoadCalzConnect() {
+			// Create a connection to the server.
+			CalzConnect = new XMLHttpRequest();
+		}
+
+  	function docalz() {
+			GetCalzConnect();
+			var w = window.open('','','_parent');
+			w.document.write('Performing zero calibration. This page will automatically close in 15 seconds. Please do not leave this page while active');
+			w.focus();
+			setTimeout(function() {w.close();}, 15000);
+		}
+
+		function GetCalzConnect() {
+	
+			// Set up the event handler for the asynchronous data request.
+			CalzConnect.onreadystatechange = ProcessCalzChange;
+			CalzConnect.open("GET", "calz.txt", true);		 // The file to get calz
+			CalzConnect.send();
+		}
+
+		function ProcessCalzChange() {
+			// Check the return status.
+			if ((CalzConnect.readyState == 4) && (CalzConnect.status == 200)) {
+				var rtext = CalzConnect.responseText;
+			// Nothing to get
+			} // End if have data
+		}
+
+  
+  // Create a connection to the server.
+  function LoadSConnect() {
+  	// Create a connection to the server.
+  	SConnect = new XMLHttpRequest();
+  } // End LoadSConnect
+
+  function MakeDataSConnect() {
+  	// Set up the event handler for the asynchronous data request.
+  	SConnect.onreadystatechange = ProcessBinChange;
+
+  	// Create the request and send it.
+  	SConnect.open("GET", "scan.dat", true);		 // The file to get scan data is scan.dat
+  	SConnect.responseType = "arraybuffer";			 // Expect it in an binary array
+  	SConnect.send();	   	 						 // Get the first data, need to get others with timer when scanning
+  } // End MakeDataSConnect
+
+  function ProcessBinChange() {
+  
+  	// Check the return status.
+  	if ((SConnect.readyState == 4) && (SConnect.status == 200)) {
+  		var arrayBuffer = SConnect.response;
+  		if (arrayBuffer) {
+   			var floatBuffer = new Float32Array(arrayBuffer);	// Get the array data and put it in a float array 
+   
+   			// Loop through and write all the data
+   			var r;
+				var f;
+
+   			// Update the frame number
+  			var ptabh = document.getElementById("scantab1").rows[0].cells[1]; // base 0 row and cell
+   			ptabh.innerHTML = floatBuffer[0].toFixed(0);
+
+				mx1 = floatBuffer[1].toFixed(dp);
+				mn1 = floatBuffer[2].toFixed(dp); 
+				mx2 = floatBuffer[3].toFixed(dp);
+				mn2 = floatBuffer[4].toFixed(dp);
+
+
+				document.getElementById("scantab1").rows[0].cells[2].innerHTML = "Min " + mn1 + " " + unitsval[1];
+				document.getElementById("scantab1").rows[0].cells[3].innerHTML = "Max " + mx1 + " " + unitsval[1];
+				document.getElementById("scantab2").rows[0].cells[1].innerHTML = "Min " + mn2 + " " + unitsval[1];
+				document.getElementById("scantab2").rows[0].cells[2].innerHTML = "Max " + mx2 + " " + unitsval[1];
+
+				// Update pressure values
+   			for (f=5, r=1 ; r<33 ; r++,f++) {
+   				var ptab = document.getElementById("scantab1").rows[r].cells[1]; // base 0 row and cell
+					ptab.innerHTML = floatBuffer[f].toFixed(dp);
+	
+					if (floatBuffer[f] > 0) {
+	 					// pos value goes in right bar graph
+						var ppbar = document.getElementById("scantab1").rows[r].cells[3];
+						ppbar.innerHTML = createbar(floatBuffer[f],mx1);			// Set the positive bar
+						var pnbar = document.getElementById("scantab1").rows[r].cells[2];
+						pnbar.innerHTML = createbar(0,mn1);								   // Zero the negative bar
+	 				} else {
+						// neg value goes in left bar graph
+						var pnbar = document.getElementById("scantab1").rows[r].cells[2];
+						pnbar.innerHTML = createbar(floatBuffer[f],mn1);			// Set the negative bar
+						var ppbar = document.getElementById("scantab1").rows[r].cells[3];
+						ppbar.innerHTML = createbar(0,mx1);								   // Zero the positive bar
+	 				}
+				} // End for loop
+
+				for (f=5, r=0 ; r<32 ; r++,f++) {
+	 				var ptab = document.getElementById("scantab2").rows[r+1].cells[1]; // base 0 row and cell
+	 				ptab.innerHTML = floatBuffer[f+32].toFixed(dp);
+	 
+	 				if (floatBuffer[f+32] > 0) {
+	 					// pos value goes in right bar graph
+						var ppbar = document.getElementById("scantab2").rows[r+1].cells[3];
+						ppbar.innerHTML = createbar(floatBuffer[f+32],mx2);		// Set the positive bar
+						var pnbar = document.getElementById("scantab2").rows[r+1].cells[2];
+						pnbar.innerHTML = createbar(0,mn2);								   	// Zero the negative bar
+	 				} else {
+	 	 				// neg value goes in right bar graph
+						var pnbar = document.getElementById("scantab2").rows[r+1].cells[2];
+						pnbar.innerHTML = createbar(floatBuffer[f+32],mn2);		// Set the negative bar
+						var ppbar = document.getElementById("scantab2").rows[r+1].cells[3];
+						ppbar.innerHTML = createbar(0,mx2);								   	// Zero the positive bar
+	 				}
+				} // End for loop
+			}  // End if data ready
+  	} // End if connect ready
+  } // End function
+ 
+  // This function creates the bar
+  function createbar(value,maxval) {
+  var bar;
+  var i;
+  var len = (value / maxval) * maxbarchar; 
+  if (len > maxbarchar) len = maxbarchar;
+  if (len < -maxbarchar) len = -maxbarchar;
+  if (len < 0) len = -len;
+  bar = "";
+  for (i=0 ; i<len ; i++) {
+//  bar += '|';
+  bar += tms;
+  }
+  return bar;
+  }
+
+	// Create a connection to the server for start scan.
+	function LoadStartScanConnect() {
+		// Create a connection to the server.
+		StartScanConnect = new XMLHttpRequest();
+	} // End LoadStartScanConnect
+
+	function GetStartScanConnect() {
+		// Set up the event handler for the asynchronous data request.
+		StartScanConnect.onreadystatechange = ProcessStartScanTextChange;
+		if (SSFlag == 1) {
+	  	StartScanConnect.open("GET", "starscan.txt?SCAN", true);		 // The file to get start scan info and start the scan
+		} else {
+	  	StartScanConnect.open("GET", "starscan.txt", true);		 	 // The file to just get info
+		}
+		StartScanConnect.send();
+	} // End GetStartScanConnect
+
+	function ProcessStartScanTextChange() {
+	
+		// Check the return status.
+		if ((StartScanConnect.readyState == 4) && (StartScanConnect.status == 200)) {
+	
+			// Expect UNITS=<val>&MAX1=<val>&MAX2=<val>&MIN1=<val>&MIN2=<val>
+			var rtext = StartScanConnect.responseText;
+			var vars = rtext.split("&");		  // Group all the variables parsed by the &
+			unitsval = vars[0].split("=");	  // UNITS=<val>		
+			var max1val = vars[1].split("=");	  // MAX1
+			var max2val = vars[2].split("=");	  // MAX2
+			var min1val = vars[3].split("=");	  // MIN1
+			var min2val = vars[4].split("=");	  // MIN2
+	
+			document.getElementById("scantab1").rows[0].cells[2].innerHTML = "Min " + min1val[1] + " " + unitsval[1];
+			document.getElementById("scantab1").rows[0].cells[3].innerHTML = "Max " + max1val[1] + " " + unitsval[1];
+			document.getElementById("scantab2").rows[0].cells[1].innerHTML = "Min " + min2val[1] + " " + unitsval[1];
+			document.getElementById("scantab2").rows[0].cells[2].innerHTML = "Max " + max2val[1] + " " + unitsval[1];
+	
+			mx1 = Number(max1val[1]);
+			mn1 = Number(min1val[1]); 
+			mx2 = Number(max2val[1]);
+			mn2 = Number(min2val[1]); 
+
+			// Set number of decimel points to hold
+			if (unitsval[1] < "RAW") {
+	  		dp = 4;
+			} else if (unitsval[1] > "RAW") {
+	  		dp = 4;
+			} else {
+	 			dp = 0;
+			}
+
+			// Start the scan update timer
+			if (SSFlag == 1) {
+				iTimer = setInterval(function(){timerhandler()},1000);	  // Move this to after reveived scan info was 250
+			}
+		} // End if have data
+  } // End function
+
+	// Create a connection to the server for stop scan.
+	function LoadStopScanConnect() {
+		// Create a connection to the server.
+		StopScanConnect = new XMLHttpRequest();
+	}
+
+	function GetStopScanConnect() {
+	
+		// Set up the event handler for the asynchronous data request.
+		StopScanConnect.onreadystatechange = ProcessStopScanTextChange;
+		StopScanConnect.open("GET", "stopscan.txt", true);		 // The file to get stop scan
+		StopScanConnect.send();
+	}
+
+	function ProcessStopScanTextChange() {
+		// Check the return status.
+		if ((StopScanConnect.readyState == 4) && (StopScanConnect.status == 200)) {
+			var rtext = StopScanConnect.responseText;
+			// Nothing to get
+		} // End if have data
+	} // End function
+ 
+  function StartScan() {
+//  iTimer = setInterval(function(){timerhandler()},250);	  // Move this to after reveived scan info
+		SSFlag = 1;
+		GetStartScanConnect();
+  }
+  
+  function StopScan() {
+  	SSFlag = 0;
+		GetStopScanConnect();
+		clearInterval(iTimer);
+  }
+  
+  function timerhandler() {
+  	MakeDataSConnect();
+  }
+
+  function SetTick() {
+		// Pop up box
+  var tickmark = prompt("Please enter 1 (" + 
+  String.fromCharCode(124) + 
+  "), 2 (" +  String.fromCharCode(0x258c) + 
+  ") or 3 (" + String.fromCharCode(0x2588) +
+  ") for the width of the bar graph mark",tmv.toString());
+
+  if (tickmark != null) {
+   var tickval = parseInt(tickmark);
+   if ((tickval >= 1) && (tickval <= 3)) {
+  
+    tmv = tickval;
+	try {
+	 localStorage.setItem("tickmark",tickmark);
+//  	 document.cookie = "tickmark=" + tickmark + "; expires=Thu, 18 Dec 2025 12:00:00 GMT";
+	}
+	catch (err) {
+	 alert ("Please enable your browser's local storage to make this setting persistent");
+	}
+	 
+  	if (tickval == 1) {
+	 tms = String.fromCharCode(124);
+     maxbarchar = 65;
+	}
+  	if (tickval == 2) { 
+	 tms = String.fromCharCode(0x258c);
+     maxbarchar = 30;
+	}
+  	if (tickval == 3) {
+	 tms = String.fromCharCode(0x2588);
+     maxbarchar = 30;
+	}     
+   } else {
+    tmv = 1;
+	tms = String.fromCharCode(124);
+    maxbarchar = 65;
+   }
+  } else {
+  	tmv = 1;
+	tms = String.fromCharCode(124);
+    maxbarchar = 65;
+  }
+  }
+
+	function getTick() {
+		tms = String.fromCharCode(124);
+		tmv = 1;
+		var ca;
+
+		try {
+			ca = localStorage.getItem("tickmark");
+ 			
+			if (ca) {
+  			var tickval = parseInt(ca);
+				if (tickval == 1) {
+					tms = String.fromCharCode(124);
+					maxbarchar = 65;
+					tmv = tickval;
+				}
+
+				if (tickval == 2) {
+ 					tms = String.fromCharCode(0x258c);
+					maxbarchar = 30;
+					tmv = tickval;
+				}
+
+				if (tickval == 3) {
+					tms = String.fromCharCode(0x2588);
+					maxbarchar = 30;
+					tmv = tickval;
+  			}
+			} else {
+				tms = String.fromCharCode(124);
+				maxbarchar = 65;
+				tmv = 1;
+ 			}
+ 		} catch(err) {
+			// Local storage is disabled
+			tms = String.fromCharCode(124);
+  		maxbarchar = 65;
+			tmv = 1;
+		}
+	}
+
+var myEvent = window.attachEvent || window.addEventListener;
+var chkevent = window.attachEvent ? 'onbeforeunload' : 'beforeunload'; /// make IE7, IE8 compitable
+
+	myEvent(chkevent, function(e) { // For >=IE7, Chrome, Firefox
+
+  console.log("Lost focus");
+	var confirmationMessage = 'Scanning will be stopped';  // a space
+		if (SSFlag == 1) {
+		  console.log("Stopping scan");
+			StopScan();
+			(e || window.event).returnValue = confirmationMessage;
+    	return confirmationMessage;
+		}
+	});
+  
+  </script>
+      
+  </head>
+
+	<body onload="jload();">
+
+ <div id="cmdarea" style="background-color: #7CA8E1">
+ 	<a href="javascript:StartScan()" style="text-decoration:none"><font color="blue" size = "4"><b>Start</b></font></a>&emsp;&emsp;&emsp;&emsp;
+ 	<a href="javascript:StopScan()" style="text-decoration:none"><font color="blue" size = "4"><b>Stop</b></font></a>&emsp;&emsp;&emsp;&emsp;
+ 	<a href="javascript:SetTick()" style="text-decoration:none"><font color="blue"><b>Set Bar Graph Mark</b></font></a>&emsp;&emsp;&emsp;&emsp;
+ 	<a href="javascript:docalz()" style="text-decoration:none"><font color="blue" size = "4"><b>Zero Cal</b></font></a>
+ </div>  
+
+ <div style="float:left; width:50%; ">
+
+<table id="scantab1" class="tftable" border="0">
+
+<colgroup span="4">
+<col width="25"></col>
+<col width="75"></col>
+<col width="200"></col>
+<col width="200"></col>
+
+</colgroup>
+
+<tr><th>Frame:</th><th class="center">0</th><th class="left">Min -15.0 PSI</th><th class="right">Max 15.0 PSI</th></tr>
+<tr><td>1</td><td>15.0</td><td class="right"></td><td class="left"></td></tr>
+<tr><td>2</td><td>15.0</td><td class="right"></td><td class="left"></td></tr>
+<tr><td>3</td><td>15.0</td><td class="right"></td><td class="left"></td></tr>
+<tr><td>4</td><td>15.0</td><td class="right"></td><td class="left"></td></tr>
+<tr><td>5</td><td>15.0</td><td class="right"></td><td class="left"></td></tr>
+<tr><td>6</td><td>15.0</td><td class="right"></td><td class="left"></td></tr>
+<tr><td>7</td><td>15.0</td><td class="right"></td><td class="left"></td></tr>
+<tr><td>8</td><td>15.0</td><td class="right"></td><td class="left"></td ></tr>
+<tr><td>9</td><td>15.0</td><td class="right"></td><td class="left"></td></tr>
+<tr><td>10</td><td>15.0</td><td class="right"></td><td class="left"></td></tr>
+<tr><td>11</td><td>15.0</td><td class="right"></td><td class="left"></td></tr>
+<tr><td>12</td><td>15.0</td><td class="right"></td><td class="left"></td></tr>
+<tr><td>13</td><td>15.0</td><td class="right"></td><td class="left"></td></tr>
+<tr><td>14</td><td>15.0</td><td class="right"></td><td class="left"></td></tr>
+<tr><td>15</td><td>15.0</td><td class="right"></td><td class="left"></td></tr>
+<tr><td>16</td><td>15.0</td><td class="right"></td><td class="left"></td></tr>
+<tr><td>17</td><td>15.0</td><td class="right"></td><td class="left"></td></tr>
+<tr><td>18</td><td>15.0</td><td class="right"></td><td class="left"></td></tr>
+<tr><td>19</td><td>15.0</td><td class="right"></td><td class="left"></td ></tr>
+<tr><td>20</td><td>15.0</td><td class="right"></td><td class="left"></td></tr>
+<tr><td>21</td><td>15.0</td><td class="right"></td><td class="left"></td></tr>
+<tr><td>22</td><td>15.0</td><td class="right"></td><td class="left"></td></tr>
+<tr><td>23</td><td>15.0</td><td class="right"></td><td class="left"></td></tr>
+<tr><td>24</td><td>15.0</td><td class="right"></td><td class="left"></td></tr>
+<tr><td>25</td><td>15.0</td><td class="right"></td><td class="left"></td></tr>
+<tr><td>26</td><td>15.0</td><td class="right"></td><td class="left"></td></tr>
+<tr><td>27</td><td>15.0</td><td class="right"></td><td class="left"></td></tr>
+<tr><td>28</td><td>15.0</td><td class="right"></td><td class="left"></td></tr>
+<tr><td>29</td><td>15.0</td><td class="right"></td><td class="left"></td></tr>
+<tr><td>30</td><td>15.0</td><td class="right"></td><td class="left"></td></tr>
+<tr><td>31</td><td>15.0</td><td class="right"></td><td class="left"></td ></tr>
+<tr><td>32</td><td>15.0</td><td class="right"></td><td class="left"></td></tr>
+</table>
+</div>
+<div style="float:right; width:50%; ">
+
+<table id="scantab2" class="tftable" border="0">
+
+<colgroup span="4">
+<col width="25"></col>
+<col width="75"></col>
+<col width="200"></col>
+<col width="200"></col>
+
+</colgroup>
+
+<tr><th colspan="2"></th><th class="left">Min -100.0 PSI</th><th class="right">Max 100.0 PSI</th></tr>
+<tr><td>33</td><td>15.0</td><td class="right"></td><td class="left"></td></tr>
+<tr><td>34</td><td>15.0</td><td class="right"></td><td class="left"></td></tr>
+<tr><td>35</td><td>15.0</td><td class="right"></td><td class="left"></td></tr>
+<tr><td>36</td><td>15.0</td><td class="right"></td><td class="left"></td></tr>
+<tr><td>37</td><td>15.0</td><td class="right"></td><td class="left"></td></tr>
+<tr><td>38</td><td>15.0</td><td class="right"></td><td class="left"></td></tr>
+<tr><td>39</td><td>15.0</td><td class="right"></td><td class="left"></td></tr>
+<tr><td>40</td><td>15.0</td><td class="right"></td><td class="left"></td ></tr>
+<tr><td>41</td><td>15.0</td><td class="right"></td><td class="left"></td></tr>
+<tr><td>42</td><td>15.0</td><td class="right"></td><td class="left"></td></tr>
+<tr><td>43</td><td>15.0</td><td class="right"></td><td class="left"></td></tr>
+<tr><td>44</td><td>15.0</td><td class="right"></td><td class="left"></td></tr>
+<tr><td>45</td><td>15.0</td><td class="right"></td><td class="left"></td></tr>
+<tr><td>46</td><td>15.0</td><td class="right"></td><td class="left"></td></tr>
+<tr><td>47</td><td>15.0</td><td class="right"></td><td class="left"></td></tr>
+<tr><td>48</td><td>15.0</td><td class="right"></td><td class="left"></td></tr>
+<tr><td>49</td><td>15.0</td><td class="right"></td><td class="left"></td></tr>
+<tr><td>50</td><td>15.0</td><td class="right"></td><td class="left"></td></tr>
+<tr><td>51</td><td>15.0</td><td class="right"></td><td class="left"></td ></tr>
+<tr><td>52</td><td>15.0</td><td class="right"></td><td class="left"></td></tr>
+<tr><td>53</td><td>15.0</td><td class="right"></td><td class="left"></td></tr>
+<tr><td>54</td><td>15.0</td><td class="right"></td><td class="left"></td></tr>
+<tr><td>55</td><td>15.0</td><td class="right"></td><td class="left"></td></tr>
+<tr><td>56</td><td>15.0</td><td class="right"></td><td class="left"></td></tr>
+<tr><td>57</td><td>15.0</td><td class="right"></td><td class="left"></td></tr>
+<tr><td>58</td><td>15.0</td><td class="right"></td><td class="left"></td></tr>
+<tr><td>59</td><td>15.0</td><td class="right"></td><td class="left"></td></tr>
+<tr><td>60</td><td>15.0</td><td class="right"></td><td class="left"></td></tr>
+<tr><td>61</td><td>15.0</td><td class="right"></td><td class="left"></td></tr>
+<tr><td>62</td><td>15.0</td><td class="right"></td><td class="left"></td></tr>
+<tr><td>63</td><td>15.0</td><td class="right"></td><td class="left"></td ></tr>
+<tr><td>64</td><td>15.0</td><td class="right"></td><td class="left"></td></tr>
+</table>
+</div>
+
+<div class="content">&emsp; <br>&emsp; <br>&emsp; <br>&emsp; <br>&emsp; <br>&emsp; <br></div>
+
+  </body>
+</html>

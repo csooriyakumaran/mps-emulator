@@ -27,7 +27,9 @@ static std::string LevelNames[(size_t)Level::_COUNT] = {"DEGUB", "INFO", "WARN",
 static std::string LevelColor[(size_t)Level::_COUNT] = {"92m", "94m", "93m", "91m"};
 
 template<typename... Args>
-static void PrintMsg(Log::Level level, std::string_view fmt, std::string tag, Args&&... args);
+static void PrintMsg(Log::Level level, std::string_view fmt, std::string_view tag, Args&&... args);
+template<typename... Args>
+static void PrintAssertMsg(std::string_view tag, std::string_view fmt="", Args&&... args);
 }; // namespace Log
 
 } // namespace aero
@@ -49,7 +51,7 @@ static void PrintMsg(Log::Level level, std::string_view fmt, std::string tag, Ar
 #define LOG_ERROR_TAG(tag,fmt,  ...) ::aero::Log::PrintMsg(::aero::Log::Level::Error, fmt, tag, __VA_ARGS__)
 
 template<typename... Args>
-void aero::Log::PrintMsg(aero::Log::Level level, std::string_view fmt, std::string tag, Args&&... args)
+void aero::Log::PrintMsg(aero::Log::Level level, std::string_view fmt, std::string_view tag, Args&&... args)
 {
 
     std::chrono::time_point t = std::chrono::system_clock::now();
@@ -68,5 +70,32 @@ void aero::Log::PrintMsg(aero::Log::Level level, std::string_view fmt, std::stri
     std::osyncstream out{std::cout};
     out << time << tagString << msg << std::endl;
 }
+template<typename... Args>
+void aero::Log::PrintAssertMsg(std::string_view tag, std::string_view fmt, Args&&... args)
+{
+    return aero::Log::PrintMsg(aero::Log::Level::Error, fmt, tag, std::forward<Args>(args)...);
+    /*std::chrono::time_point t = std::chrono::system_clock::now();*/
+    /*std::string time          = std::format("{:%Y-%m-%d %H:%M:%OS}", t);*/
+    /**/
+    /*aero::Log::Level level = aero::Log::Level::Error;*/
+    /*std::string loglevel      = Log::LevelNames[(size_t)level];*/
+    /*std::string logcolor      = Log::LevelColor[(size_t)level];*/
+    /**/
+    /*std::string tagString;*/
+    /*if (tag.empty())*/
+    /*    tagString = std::format(" [ \033[{}{:5}\033[0m ] ", logcolor, loglevel);*/
+    /*else*/
+    /*    tagString = std::format(" [ \033[{}{:5}\033[0m ] :: \033[{}{}\033[0m :: ", logcolor, loglevel, logcolor, tag);*/
+    /**/
+    /*std::string msg = std::vformat(fmt, std::make_format_args(args...));*/
+    /**/
+    /*std::osyncstream out{std::cout};*/
+    /*out << time << tagString << msg << std::endl;*/
+}
 
+template<>
+inline void aero::Log::PrintAssertMsg(std::string_view tag, std::string_view fmt)
+{
+    return aero::Log::PrintMsg(aero::Log::Level::Error, fmt, tag);
+}
 #endif // _AERO_CORE_LOG_H_

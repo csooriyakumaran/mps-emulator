@@ -28,15 +28,15 @@ private:
     void StopServers();
 
     // ---- S E R V E R - C A L L B A C K S -----------------------------------
-    void OnClientConnected(const ClientID& client);
-    void OnClientDisconnected(const ClientID& client);
-    void OnDataReceived(const ClientID& client, const aero::Buffer);
+    void OnClientConnected();
+    void OnClientDisconnected();
+    void OnDataReceived(const aero::Buffer buf);
 
     // ----  T C P - S E R V E R ----------------------------------------------
     void SendMsg(std::string_view msg);
 
     // ----  U P D - S E R V E R ----------------------------------------------
-    void SendDataGram(aero::Buffer buff, ClientID id);
+    void SendDataGram(aero::Buffer buff);
 
     // ---- P R O C E S S I N G -----------------------------------------------
     void OnCommand(std::string_view cmd);
@@ -44,10 +44,9 @@ private:
 private:
     uint16_t m_Port = 0u;
     std::unique_ptr<aero::networking::Server> m_TCP;
-    std::unique_ptr<aero::networking::Server> m_UDP;
+    /*std::unique_ptr<aero::networking::Server> m_UDP;*/
     std::unique_ptr<Console> m_Console;
 
-    std::map<ClientID, aero::networking::ClientInfo> m_ConnectedClients;
 
     // std::queue<Packets> m_ScanDataQueue;
 };

@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+  	<meta charset="utf-8">
+    <meta name="generator" content="CoffeeCup HTML Editor (www.coffeecup.com)">
+    <meta name="dcterms.created" content="Sun, 16 Feb 2014 15:34:30 GMT">
+    <meta name="description" content="">
+    <meta name="keywords" content="">
+    <title>Scanivalve MPS 4000 Wep Page Interface</title>
+
+		<style>
+	
+			#scan-submit {
+    		position:fixed;
+    		left:20%;
+			}
+	
+		</style>	
+	
+		<script language="JavaScript">
+ 
+		var SsuConnect;
+		var SsuPConnect;
+		var SaveConnect;
+		var ValveConnect;
+		var CalzConnect;
+
+		// Status timer for valve position
+		setInterval(GetValveConnect, 5000);
+	
+		function jload() {
+	 		LoadSsuConnect();
+			GetSsuConnect();		// Call this to update variables
+			LoadSaveConnect();	// Save s command
+			LoadValveConnect();
+			GetValveConnect();	// Get the current valve position
+	  	LoadCalzConnect();
+		}	
+
+		// Create a connection to the server for stop scan.
+		function LoadCalzConnect() {
+			// Create a connection to the server.
+			CalzConnect = new XMLHttpRequest();
+		}
+
+  	function docalz() {
+			GetCalzConnect();
+			var w = window.open('','','_parent');
+			w.document.write('Performing zero calibration. This page will automatically close in 15 seconds. Please do not leave this page while active');
+			w.focus();
+			setTimeout(function() {w.close();}, 15000);
+		}
+
+		function GetCalzConnect() {
+	
+			// Set up the event handler for the asynchronous data request.
+			CalzConnect.onreadystatechange = ProcessCalzChange;
+			CalzConnect.open("GET", "calz.txt", true);		 // The file to get calz
+			CalzConnect.send();
+		}
+
+		function ProcessCalzChange() {
+			// Check the return status.
+			if ((CalzConnect.readyState == 4) && (CalzConnect.status == 200)) {
+				var rtext = CalzConnect.responseText;
+			// Nothing to get
+			} // End if have data
+		}
+
+		// Create a connection to the server.
+		function LoadValveConnect() {
+			ValveConnect = new XMLHttpRequest();
+		} // End LoadSaveConnect
+
+
+		// Create a connection to the server.
+		function LoadSaveConnect() {
+			SaveConnect = new XMLHttpRequest();
+		} // End LoadSaveConnect
+
+		// Create a connection to the server.
+		function LoadSsuConnect()	{
+			// Create a connection to the server.
+			SsuConnect = new XMLHttpRequest();
+			SsuPConnect = new XMLHttpRequest();
+		}
+
+		function GetSsuConnect() {
+			// Set up the event handler for the asynchronous data request.
+			SsuConnect.onreadystatechange = ProcessTextChange;
+
+			// Create the request and send it.
+			SsuConnect.open("GET", "ssu.txt", true);		 // The file to get scan set up ssu.txt
+			SsuConnect.send();
+		}
+
+	
+		function PostSsuConnect() {
+			// Set up the event handler for the asynchronous data request.
+			SsuPConnect.onreadystatechange = ProcessTextChangePost;
+
+			var sendstr = 
+				"ssu.txt?ScanRate=" + document.getElementById("IdScanRate").value + "&" +
+				"FramesPerScan=" + document.getElementById("FPS").value + "&" +
+				"Unit=" + document.getElementById("IdUnit").value  + "&" +
+				"Trig=" + document.getElementById("Trig").value + "&" +
+				"Subset=" + document.getElementById("SSS").value;
+	
+			sendstr = sendstr.replace( /\s/g, ""); 
+			SsuPConnect.open("GET", sendstr, true);		 // The file to get scan set up ssu.txt
+			SsuPConnect.send();
+		} // End PostSsuConnect
+	
+		function ProcessTextChangePost() {
+			// Check the return status.
+			if ((SsuPConnect.readyState == 4) && (SsuPConnect.status == 200)) {
+				var rtext = SsuPConnect.responseText;
+				// Expect RATE=<val>&FPS=<val>&UNITS=<val>
+				var vars = rtext.split("&");		  // Group all the variables sorted by the &
+	
+				// RATE=<val>
+				var rateval = vars[0].split("=");
+				document.getElementById("IdScanRate").value = rateval[1];		
+
+				// FPS	
+				var fpsval = vars[1].split("=");
+				document.getElementById("FPS").value = fpsval[1];		
+
+				var nFps = Number(fpsval[1]);
+				if (nFps == 0) {
+					alert("ERROR: Frames Per Scan cannot be zero, changing it to one");
+					document.getElementById("FPS").value = "1";
+					PostSsuConnect();
+				}
+
+				// Units
+				var unitval = vars[2].split("=");
+	
+				var i;
+				var n = document.getElementById("IdUnit").length;
+				var y = document.getElementById("IdUnit").options;
+	 
+				for (i=0 ; i<n ; i++) {
+	 				if (y[i].text < unitval[1]) {
+	 				} else if (y[i].text > unitval[1]) {
+	 				} else {
+	  				document.getElementById("IdUnit").selectedIndex=i;
+	  				break;
+	 				} // End if else
+				} // End for
+	
+				// Trig
+				var trigval = vars[3].split("=");
+	
+				n1 = document.getElementById("Trig").length;
+				y1 = document.getElementById("Trig").options;
+	
+				for (i=0 ; i<n1 ; i++) {
+	 				if (y1[i].value < trigval[1]) {
+	 				} else if (y1[i].value > trigval[1]) {
+	 				} else {
+	  				document.getElementById("Trig").selectedIndex=i;
+	  				break;
+	 				}
+				} // End for
+
+				// Subset=<val>
+				var subsetval = vars[4].split("=");
+				document.getElementById("SSS").value = subsetval[1];		
+
+			} // End if have data
+		} // End ProcessTextChangePost
+
+
+		function ProcessTextChange() {
+
+			// Check the return status.
+			if ((SsuConnect.readyState == 4) && (SsuConnect.status == 200)) {
+				var rtext = SsuConnect.responseText;
+				// Expect RATE=<val>&FPS=<val>&UNITS=<val>&Trig=<val>
+				var vars = rtext.split("&");		  // Group all the variables sorted by the &
+	
+				// RATE=<val>
+				var rateval = vars[0].split("=");
+				document.getElementById("IdScanRate").value = rateval[1];		
+
+				// FPS	
+				var fpsval = vars[1].split("=");
+				document.getElementById("FPS").value = fpsval[1];		
+
+				// Handle zero setting
+				var nFps = Number(fpsval[1]);
+				if (nFps == 0) {
+					alert("ERROR: Frames Per Scan cannot be zero, changing it to one");
+					document.getElementById("FPS").value = "1";
+					PostSsuConnect();
+				}
+	
+				// Units
+				var unitval = vars[2].split("=");
+	
+				var i;
+				var n = document.getElementById("IdUnit").length;
+				var y = document.getElementById("IdUnit").options;
+	 
+				for (i=0 ; i<n ; i++) {
+	 				if (y[i].text < unitval[1]) {
+	 				} else if (y[i].text > unitval[1]) {
+	 				} else {
+	  				document.getElementById("IdUnit").selectedIndex=i;
+	  				break;
+	 				}
+				} // End for
+
+				// Trig
+				var trigval = vars[3].split("=");
+	
+				var n1 = document.getElementById("Trig").length;
+				var y1 = document.getElementById("Trig").options;
+	 
+				for (i=0 ; i<n1 ; i++) {
+	 				if (y1[i].value < trigval[1]) {
+	 				} else if (y1[i].value > trigval[1]) {
+	 				} else {
+	  				document.getElementById("Trig").selectedIndex=i;
+	  				break;
+	 				}
+				} // End for
+
+				// Subset	
+				var subsetval = vars[4].split("=");
+				document.getElementById("SSS").value = subsetval[1];		
+
+			} // End if have data
+		} // End ProcessTextChange
+
+		function GetSaveConnect() {
+			var sendstr;
+			sendstr = "saves.txt";
+
+			// Set up the event handler for the asynchronous data request.
+			SaveConnect.onreadystatechange = ProcessTextChangeSave;
+	
+			SaveConnect.open("GET", sendstr, true);		 // The file to do a save
+			SaveConnect.send();
+		} // End GetCalPtsConnect
+
+		// Handle data sent back from device
+		function ProcessTextChangeSave() {
+
+			// Check the return status.
+			if ((SaveConnect.readyState == 4) && (SaveConnect.status == 200))	{
+				var rtext = SaveConnect.responseText;
+			} // End have data
+		} // End SaveConnect
+
+		// Get the valve state
+		function GetValveConnect() {
+			var sendstr;
+			sendstr = "valve.txt";
+
+			// Set up the event handler for the asynchronous data request.
+			ValveConnect.onreadystatechange = ProcessTextChangeValve;
+			ValveConnect.open("GET", sendstr, true);
+			ValveConnect.send();
+		} // End GetValveConnect
+
+		// Handle data sent back from device
+		function ProcessTextChangeValve() {
+
+			// Check the return status.
+			if ((ValveConnect.readyState == 4) && (ValveConnect.status == 200))	{
+				var rtext = ValveConnect.responseText;
+
+				var str1 = "Err";
+ 
+
+				// Expect VALVE=<Cal or Px>
+				var vars = rtext.split("&");		  // Group all the variables sorted by the &
+	
+				// RATE=<val>
+				var valveval = vars[0].split("=");
+//				document.getElementById("IdValve").value = valveval[1];
+
+				console.log("Valve=" + valveval[1]);
+	
+
+				// If Err issue alert
+				var n = str1.localeCompare(valveval[1]);
+				if (n == 0) {
+					alert("ERROR: Scan stopped. Reduce scan rate.");
+				} else {
+					document.getElementById("cmdareatab").rows[0].cells[6].innerHTML = valveval[1];
+				}
+
+	
+
+			} // End have data
+		} // End ProcessTextChangeValve
+
+		</script>
+  </head>
+
+  <body onload="jload();">
+  
+  <div id="cmdarea" style="height:40px; width:100%; border:4px; overflow:auto;">
+ 
+  <table id="cmdareatab" style="width:100%; border-collapse: collapse; border: 1px solid black; background-color: #7CA8E1;">
+ 	<tr>
+	<td style="width:125px;"><a href="mpsscan.csv" download style="text-decoration:none"><font color="blue" size = "4"><b>Scan to .CSV..</b></font></a></td>
+	<td style="width:125px;"><a href="mpsscan.txt" download style="text-decoration:none"><font color="blue" size = "4"><b>Scan to .TXT..</b></font></a></td>
+	<td style="width:125px;"><a href="mpsscan.dat" download style="text-decoration:none"><font color="blue" size = "4"><b>Scan to .DAT..</b></font></a></td>
+	<td style="width:250px;"><a href="mpsstat.dat" download style="text-decoration:none"><font color="blue" size = "4"><b>Statistical Scan to .DAT..</b></font></a></td>
+	<td style="width:125px;"><a href="javascript:docalz()" download style="text-decoration:none"><font color="blue" size = "4"><b>Zero Cal</b></font></a></td>
+ 	<td style="width:125px;"><a href="javascript:GetValveConnect()" style="text-decoration:none;"><font color="blue" size = "4"><b>Valve Position:</b></font></a></td>
+	<td style="width:125px; id="IdValve"><font color="black" size = "4"><b>Cal</b></td>
+ 	<td style="text-align:right;"><a href="javascript:GetSaveConnect()" style="text-decoration:none;"><font color="blue" size = "4"><b>Save</b></font></a></td>
+ 	</tr>
+ </table>
+ </div>  
+  
+  <div id="scanset" style="height:95px; width:100%; border:4px; overflow:auto; ">
+
+  <table id="scansettab" style="text-align:center; width:100%; border-collapse: collapse; border: 1px solid black; background-color: #B3C8E4;">
+    <tr><th style="text-align:center;">Scan Settings</th></tr>
+    <tr><td style="text-align:center;">
+	Scan Rate Per Channel: <input type="text" id="IdScanRate" size="8" name="ScanRate" value="100">
+    Frame Per Scan: <input type="text" id="FPS" name="FramesPerScan" size="8" value="10">
+  	Units: <select id="IdUnit">
+    <option value="RAW">RAW</option>
+    <option value="RAWZ">RAWZ</option>
+    <option value="PSI">PSI</option>
+    <option value="ATM">ATM</option>
+    <option value="BAR">BAR</option>
+    <option value="CMHG">CMHG</option>
+    <option value="CMH2O">CMH2O</option>
+    <option value="DECIBAR">DECIBAR</option>
+    <option value="FTH2O">FTH2O</option>
+    <option value="GCM2">GCM2</option>
+    <option value="INHG">INHG</option>
+    <option value="INH2O">INH2O</option>
+    <option value="KNM2">KNM2</option>
+    <option value="KGM2">KGM2</option>
+    <option value="KGCM2">KGCM2</option>
+    <option value="KPA">KPA</option>
+    <option value="KIPIN2">KIPIN2</option>
+    <option value="MPA">MPA</option>
+    <option value="MBAR">MBAR</option>
+    <option value="MH2O">MH2O</option>
+    <option value="MMHG">MMHG</option>
+    <option value="NM2">NM2</option>
+    <option value="NCM2">NCM2</option>
+    <option value="OZIN2">OZIN2</option>
+    <option value="OZFT2">OZFT2</option>
+    <option value="PA">PA</option>
+    <option value="PSF">PSF</option>
+    <option value="TORR">TORR</option>
+    <option value="USER">USER</option>
+    </select>
+	Triggering: <select id="Trig">
+    <option value="0">Internal</option>
+    <option value="1">External</option>
+    <option value="2">Scan</option>
+    <option value="3">AutoStart</option>
+    </select>
+  Subset Size: <input type="text" id="SSS" name="SubsetSize" size="8" value="10">
+	</td></tr>
+	<tr><td style="border: 1px solid black; text-align:center;"><input type="button" onclick="PostSsuConnect()" value="Submit"></td></tr>
+ </table>
+ </div>
+ 		 
+  </body>
+</html>

@@ -24,18 +24,10 @@
 #include "aero/core/threads.h"
 #include "aero/networking/socket.h"
 
-typedef uint32_t ClientID;
+typedef uint64_t ClientID;
 
 namespace aero::networking
 {
-
-struct ClientInfo
-{
-    std::string host     = "127.0.0.1";
-    uint16_t port        = 65432;
-    SocketType type      = SocketType::TCP;
-    uint32_t buffer_size = 4096;
-};
 
 struct ServerInfo
 {
@@ -46,18 +38,12 @@ struct ServerInfo
     uint32_t buffer_size = 4096;
 };
 
-struct Transmittal
-{
-    ClientID id;
-    Buffer data;
-
-};
 class Server
 {
 public:
-    using DataReceivedFn     = std::function<void(const ClientInfo&, const Buffer)>;
-    using ClientConnectFn    = std::function<void(const ClientInfo&)>;
-    using ClientDisconnectFn = std::function<void(const ClientInfo&)>;
+    using DataReceivedFn     = std::function<void(const Buffer)>;
+    using ClientConnectFn    = std::function<void()>;
+    using ClientDisconnectFn = std::function<void()>;
 
 public:
     Server(const ServerInfo& info);
@@ -74,42 +60,37 @@ public:
 
     //---- S E N D - D A T A --------------------------------------------------
 
-    void SendBufferToClient(ClientID id, Buffer buff);
-    void SendBufferToAll(Buffer buff, ClientID exclude = 0);
-    void SendStringToClient(ClientID id, const std::string& msg);
-    void SendStringToAll(const std::string& msg, ClientID exclude = 0);
+    void SendBuffer(Buffer buff);
+    void SendString(const std::string& msg);
 
     template<typename T>
-    void SendDataToClient(ClientID client, const T& data)
+    void SendData(const T& data)
     {
-        SendBufferToClient(client, Buffer(&data, sizeof(T)));
-    }
-
-    template<typename T>
-    void SendDataToAll(const T& data, ClientID exclude = 0)
-    {
-        SendBufferToAll(Buffer(&data, sizeof(T)), exclude);
+        SendBuffer(Buffer(&data, sizeof(T)));
     }
 
     //------------------------------------------------------------------------
-    void KickClient(ClientID client);
+    void KickClient();
 
-    bool IsRunning() const { return m_Running; }
+    bool IsRunning() const { return m_ServerIsRunning; }
+    bool IsClientConnected() const { return m_ClientConnected; }
 
 private:
-    void SendDataThreadFn();
 
-    void RecvData();
-    void AcceptClientsThreadFn();
-    void HandleConnectionThreadFn();
+    void NetworkThreadFn();
+    void PollData();
+    void PollConnectionStatus();
+    
+    void SendDataThreadFn();
 
 private:
     ServerInfo m_ServerInfo;
 
-    std::map<ClientID, ClientInfo> m_Clients;
-    std::queue<Transmittal> m_SendBufferQueue;
-    bool m_Running  = false;
-    Socket m_Socket = 0u;
+    std::queue<Buffer> m_DataQueue;
+    bool m_ServerIsRunning = false;
+    bool m_ClientConnected = false;
+    Socket m_ServerSocket;
+    Socket m_ClientSocket;
 
     DataReceivedFn m_DataReceivedCallback;
     ClientConnectFn m_ClientConnectCallback;

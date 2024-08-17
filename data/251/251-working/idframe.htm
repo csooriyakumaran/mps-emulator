@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+  	<meta charset="utf-8">
+    <meta name="generator" content="CoffeeCup HTML Editor (www.coffeecup.com)">
+    <meta name="dcterms.created" content="Fri, 21 Feb 2014 16:55:54 GMT">
+    <meta name="description" content="">
+    <meta name="keywords" content="">
+    <title>Scanivalve WebScan</title>
+    
+	<style>
+		   
+    body {
+	background: rgba(247,247,247,1);
+	background: -moz-linear-gradient(top, rgba(247,247,247,1) 0%, rgba(237,237,237,1) 47%, rgba(230,230,230,1) 100%);
+	background: -webkit-gradient(left top, left bottom, color-stop(0%, rgba(247,247,247,1)), color-stop(47%, rgba(237,237,237,1)), color-stop(100%, rgba(230,230,230,1)));
+	background: -webkit-linear-gradient(top, rgba(247,247,247,1) 0%, rgba(237,237,237,1) 47%, rgba(230,230,230,1) 100%);
+	background: -o-linear-gradient(top, rgba(247,247,247,1) 0%, rgba(237,237,237,1) 47%, rgba(230,230,230,1) 100%);
+	background: -ms-linear-gradient(top, rgba(247,247,247,1) 0%, rgba(237,237,237,1) 47%, rgba(230,230,230,1) 100%);
+	background: linear-gradient(to bottom, rgba(247,247,247,1) 0%, rgba(237,237,237,1) 47%, rgba(230,230,230,1) 100%);
+	filter:<img src="svlogo.jpg" width="279" height="38" alt="" border="0"> progid:DXImageTransform.Microsoft.gradient( startColorstr='#f7f7f7', endColorstr='#e6e6e6', GradientType=0 );
+    }
+	  
+	#idtab {
+    position: fixed;
+    top: 14px;
+	right: 14px;
+	font-size:12px;
+	border-width: 2px;
+	border-collapse: collapse;
+	border-style:solid;
+	border-color: rgb(31,51,116);
+	}
+	
+    #idimg {
+    position: fixed;
+    top: 14px;
+	left: 14px;
+	}
+	
+  </style>
+  
+	<script language="JavaScript">
+
+	// Create a connection to the server.
+  var IdConnect;
+	 
+ 	function jload() {
+  	LoadConnect();
+		GetIdConnect();			  // Call this to update variables
+	}	
+  
+  function LoadConnect() {
+  	// Create a connection to the server.
+	  IdConnect = new XMLHttpRequest();
+	}
+	
+	function GetIdConnect() {
+		// Set up the event handler for the asynchronous data request.
+		IdConnect.onreadystatechange = ProcessTextChange;
+
+		// Create the request and send it.
+		IdConnect.open("GET", "id.txt", true);		 // The file to get scan set up ssu.txt
+		IdConnect.send();
+	}
+
+	function ProcessTextChange() {
+		// Check the return status.
+		if ((IdConnect.readyState == 4) && (IdConnect.status == 200)) {
+			var rtext = IdConnect.responseText;
+	
+			// Expect IPADD=<val>&SN=<val>&NPR1=<val>&NPR2=<val>&NPR3=<val>&NPR4=<val>
+			var vars = rtext.split("&");		  // Group all the variables sorted by the &
+	
+			// IPADD=<val>
+			var ipadd = vars[0].split("=");
+	
+			var ptab1 = document.getElementById("idtab").rows[0].cells[1]; // base 0 row and cell
+			ptab1.innerHTML = ipadd[1];
+
+			// SN=<sn>	
+			var snval = vars[1].split("=");
+			var ptab2 = document.getElementById("idtab").rows[0].cells[3]; // base 0 row and cell
+			ptab2.innerHTML = snval[1];
+	
+			// NPR1=n.nnnn
+			var npr1val = vars[2].split("=");
+	
+			// NPR2=n.nnnn
+			var npr2val = vars[3].split("=");
+	
+			// NPR3=n.nnnn
+			var npr3val = vars[4].split("=");
+	
+			// NPR4=n.nnnn
+			var npr4val = vars[5].split("=");
+	
+			var ptab3 = document.getElementById("idtab").rows[1].cells[3]; // base 0 row and cell
+//			ptab3.innerHTML = npr1val[1] + " " + npr2val[1] + " " + npr3val[1] + " " + npr4val[1];
+			ptab3.innerHTML = npr1val[1] + " " + npr2val[1];
+		} // End if have data
+	} // End function
+  </script>
+  </head>
+  
+  <body onload="jload();">
+  <img id="idimg" border="0" src="svlogo.gif" alt="MPS 4264" width="200" height="40">
+  
+  <table id="idtab" width=400px>
+  <tr> 
+  	<td>IP Address:</td><td>0.0.0.0</td><td>Serial Number:</td><td>000</td>
+  </tr>
+  <tr>
+  	<td>Model Number:</td><td>MPS 4264</td><td>Pressure Range:</td><td>-5.00, +5.00</td>
+  </tr> 
+  </table>
+   
+  </body>
+</html>

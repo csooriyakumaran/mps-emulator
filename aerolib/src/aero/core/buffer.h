@@ -18,15 +18,15 @@ struct Buffer
     {
     }
 
-    Buffer(const void* data, uint64_t size)
+    Buffer(const void* data, uint64_t _size)
         : data((void*)data),
-          size(size)
+          size(_size)
     {
     }
 
-    Buffer(const Buffer& other, uint64_t size)
+    Buffer(const Buffer& other, uint64_t _size)
         : data(other.data),
-          size(size)
+          size(_size)
     {
     }
 
@@ -38,24 +38,24 @@ struct Buffer
         return buff;
     }
 
-    static Buffer Copy(const void* data, uint64_t size)
+    static Buffer Copy(const void* data, uint64_t _size)
     {
         Buffer buff;
-        buff.Allocate(size);
-        memcpy(buff.data, data, size);
+        buff.Allocate(_size);
+        memcpy(buff.data, data, _size);
         return buff;
     }
 
-    void Allocate(uint64_t size)
+    void Allocate(uint64_t _size)
     {
         delete[] (uint8_t*)data;
         data = nullptr;
 
-        if (size == 0)
+        if (_size == 0)
             return;
 
-        data = new uint8_t[size];
-        size = size;
+        data = new uint8_t[_size];
+        size = _size;
     }
 
     void Release()

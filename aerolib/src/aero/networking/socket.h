@@ -139,6 +139,35 @@ static bool BindSocket(Socket& s)
     return true;
 }
 
+static bool ListenForConnection(Socket& s)
+{
+
+    if (listen(s.socket, 10) == SOCKET_ERROR)
+    {
+        LOG_ERROR_TAG(
+            "Networking", "Failed to listen for connections on port {} [ Error {} ]",
+            s.address.sin_port, GetError()
+        );
+        return false;
+    }
+
+    return true;
+}
+static bool AcceptConnection(Socket& server, Socket& client)
+{
+    socklen_t socklen = sizeof(client.address);
+    if ( (client.socket =
+            accept(server.socket, (sockaddr*)&client.address, &socklen) ) == INVALID_SOCKET)
+    {
+        LOG_ERROR_TAG(
+            "Networking", "Failed to accept connections on port {} [ Error {} ]",
+            server.address.sin_port, GetError()
+        );
+        return false;
+    }
+    return true;
+}
+
 static void CloseSocket(Socket& s)
 {
 #ifndef PLATFORM_WINDOWS
