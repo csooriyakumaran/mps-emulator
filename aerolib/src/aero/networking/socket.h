@@ -156,8 +156,8 @@ static bool ListenForConnection(Socket& s)
 static bool AcceptConnection(Socket& server, Socket& client)
 {
     socklen_t socklen = sizeof(client.address);
-    if ( (client.socket =
-            accept(server.socket, (sockaddr*)&client.address, &socklen) ) == INVALID_SOCKET)
+    if ((client.socket = accept(server.socket, (sockaddr*)&client.address, &socklen)) ==
+        INVALID_SOCKET)
     {
         LOG_ERROR_TAG(
             "Networking", "Failed to accept connections on port {} [ Error {} ]",
@@ -167,6 +167,43 @@ static bool AcceptConnection(Socket& server, Socket& client)
     }
     return true;
 }
+
+static bool PollConnection(const Socket& s)
+{
+    struct timeval tv = {0, 10};
+    fd_set rfds;
+    FD_ZERO(&rfds);
+    FD_SET(s.socket, &rfds);
+
+    int rec = select((int)s.socket + 1, &rfds, NULL, NULL, &tv);
+
+    if (rec < 0)
+    {
+        LOG_ERROR_TAG(
+            "Networking", "failed to select socket on port {} [ Error {} ]", s.address.sin_port,
+            GetError()
+        );
+        return false;
+    }
+
+    if (rec == 0)
+        return true;
+
+    char buf[1];
+    if ((recv(s.socket, buf, 1, MSG_PEEK)) < 0)
+    {
+        char ipstr[INET_ADDRSTRLEN];
+        inet_ntop(s.address.sin_family, &(s.address.sin_addr), ipstr, INET_ADDRSTRLEN);
+        LOG_WARN_TAG(
+            "Networking", "Connection with client at {}:{} was lost", ipstr,
+            s.address.sin_port
+        );
+        return false;
+    }
+    return true;
+}
+
+
 
 static void CloseSocket(Socket& s)
 {

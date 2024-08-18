@@ -5,13 +5,13 @@
 #include <memory>
 #include <queue>
 #include <stdint.h>
+#include <string>
 #include <string_view>
+#include <vector>
 
 #include "aero/core/layer.h"
 #include "aero/networking/server.h"
 #include "console.h"
-
-/*#include "console.h"*/
 
 class ServerLayer : public aero::Layer
 {
@@ -27,6 +27,9 @@ private:
     void StartServers();
     void StopServers();
 
+    // ---- C O N S O L E - C A L L B A C K -----------------------------------
+    void OnConsoleInput(std::string_view msg);
+
     // ---- S E R V E R - C A L L B A C K S -----------------------------------
     void OnClientConnected();
     void OnClientDisconnected();
@@ -39,12 +42,15 @@ private:
     void SendDataGram(aero::Buffer buff);
 
     // ---- P R O C E S S I N G -----------------------------------------------
+    bool IsValidMsg(const std::string_view& msg);
     void OnCommand(std::string_view cmd);
 
 private:
     uint16_t m_Port = 0u;
     std::unique_ptr<aero::networking::Server> m_TCP;
     /*std::unique_ptr<aero::networking::Server> m_UDP;*/
+
+    //- user input console for server application
     std::unique_ptr<Console> m_Console;
 
 

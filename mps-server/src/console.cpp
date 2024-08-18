@@ -12,6 +12,7 @@ Console::~Console()
     m_InputThreadRunning = false;
 
     LOG_WARN_TAG("CONSOLE", "Input thread of the console will hang until it receives user input");
+    std::this_thread::sleep_for(std::chrono::milliseconds(500));
     std::cout << "Press <Enter> to stop or restart the console: ";
     m_MessageCallback = nullptr;
 }

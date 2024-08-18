@@ -62,7 +62,8 @@ void aero::ThreadPool::KillAll()
     
     for (auto& t : m_Threads)
     {   
-        LOG_DEBUG_TAG("ThreadPool", "Reqesting stop on {}", std::hash<std::thread::id>{}(t.get_id()));
+        uint64_t  thread_id = std::hash<std::thread::id>()(t.get_id());
+        LOG_DEBUG_TAG("ThreadPool", "Reqesting stop on {}", thread_id);
         // LOG_DEBUG_TAG("ThreadPool", "Reqesting stop on {}", t.get_id());
         bool to_stop = t.request_stop();
     }

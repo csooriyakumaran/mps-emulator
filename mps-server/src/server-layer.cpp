@@ -2,10 +2,13 @@
 #include <chrono>
 #include <format>
 #include <iostream>
+#include <sstream>
 
 #include "aero/core/application.h"
-#include "aero/core/log.h"
 #include "aero/core/assert.h"
+#include "aero/core/log.h"
+
+#include "utils/string-utils.h"
 
 //- Initialize members
 ServerLayer::ServerLayer(uint16_t port)
@@ -18,24 +21,18 @@ ServerLayer::~ServerLayer() {}
 void ServerLayer::OnAttach()
 {
     m_Console = std::make_unique<Console>();
-    m_Console->SetMessageCallback(
-        [this](std::string_view msg)
-        {
-            /*std::string cmd = std::format(R"({}\r\n)", msg);*/
-            this->OnCommand(msg);
-        }
-    );
+    m_Console->SetMessageCallback([this](std::string_view msg) { this->OnConsoleInput(msg); });
 
     //-set up the TCP server
     aero::networking::ServerInfo tcp_info;
-    tcp_info.name    = "TCP-SERVER";
-    tcp_info.workers = 5;
-    tcp_info.port    = m_Port;
-    tcp_info.buffer_size  = 1024;
+    tcp_info.name        = "TCP-SERVER";
+    tcp_info.workers     = 5;
+    tcp_info.port        = m_Port;
+    tcp_info.buffer_size = 1024;
 
-    m_TCP            = std::make_unique<aero::networking::Server>(tcp_info);
-    m_TCP->SetClientConCallback([this](){ OnClientConnected(); });
-    m_TCP->SetDataRecvCallback([this](const aero::Buffer buf){ OnDataReceived(buf); });
+    m_TCP                = std::make_unique<aero::networking::Server>(tcp_info);
+    m_TCP->SetClientConCallback([this]() { this->OnClientConnected(); });
+    m_TCP->SetDataRecvCallback([this](const aero::Buffer buf) { this->OnDataReceived(buf); });
     m_TCP->Start();
 
     /*aero::networking::ServerInfo udp_info;*/
@@ -50,59 +47,97 @@ void ServerLayer::OnAttach()
 
 void ServerLayer::OnDetach()
 {
-
     m_TCP->Stop();
     /*m_UDP->Stop();*/
 }
 
 void ServerLayer::OnUpdate()
 {
+    //- if the server shutsdown for some reason, restart it.
+    if (!m_TCP->IsRunning())
+        m_TCP->Start();
+
+    /*if (!m_UDP->IsRunning())*/
+    /*    m_UDP->Start();*/
+
     LOG_DEBUG_TAG("ServerLayer", "Running at {:8.2f} fps", aero::Application::Get().FrameRate());
 }
+// ---- C O N S O L E - C A L L B A C K ---------------------------------------
 
-void ServerLayer::SendMsg(std::string_view msg)
+void ServerLayer::OnConsoleInput(std::string_view msg)
 {
-    if (msg[0] == '/')
+
+    if (msg[0] == '/' && msg.size() > 1)
     {
-        OnCommand(msg);
+        std::string_view cmd(&msg[1], msg.size()-1);
+        OnCommand(cmd);
         return;
     }
 
-    if (msg.empty())
-        return;
-
-    //- echo message to server console
-    LOG_INFO_TAG("SERVER", msg);
+    m_TCP->SendString(std::string(msg) + "\r\n>");
 }
 
-void ServerLayer::OnCommand(std::string_view cmd)
-{
-    if (cmd.size() < 2 || cmd[0] != '/')
-        return;
+// ---- S E R V E R - C A L L B A C K S ---------------------------------------
 
-    std::string_view cmdStr(&cmd[1], cmd.size() - 1);
+void ServerLayer::OnClientConnected() { }
 
-    if (cmdStr == "shutdown")
-        return aero::Application::Get().Shutdown();
-    if (cmdStr == "restart")
-        return aero::Application::Get().Restart();
-
-    //- TODO(send this to the client that requested it and echo to console)
-    LOG_ERROR_TAG("SERVER", "Inalid Command: `{}`", cmd);
-    return;
-}
-
-void ServerLayer::OnClientConnected()
-{
-
-    LOG_ERROR_TAG("TEMP", "Client Connected");
-}
+void ServerLayer::OnClientDisconnected() {}
 
 void ServerLayer::OnDataReceived(const aero::Buffer buf)
 {
-    std::string raw = std::format(R"({0})", buf.As<char>());
-    LOG_WARN_TAG("TEMP", "Raw data recieved: {}", raw);
-    LOG_WARN_TAG("TEMP", "Bytes recieved: {}", buf.size);
-    LOG_WARN_TAG("TEMP", "Data recieved: {}", buf.As<char>());
-    m_TCP->SendBuffer(buf);
+
+    std::string_view cmd(buf.As<char>(), buf.size);
+
+    LOG_DEBUG_TAG("SERVER", "Data revieced from client `{}`", cmd);
+
+    //validate input
+
+    //- handle command
+    OnCommand(cmd);
+}
+
+// ----  T C P - S E R V E R --------------------------------------------------
+/**/
+/*void ServerLayer::SendMsg(std::string_view msg)*/
+/*{*/
+/*    if (msg.empty())*/
+/*        return;*/
+/**/
+/*    //- echo message to server console*/
+/*    m_TCP->SendString(std::string(msg));*/
+/*}*/
+/**/
+
+// ---- U D P - S E R V E R ---------------------------------------------------
+
+/*void ServerLayer::SendData(aero::Buffer buf)*/
+/*{*/
+/**/
+/*    m_UDP->SendBuffer(aero::Buffer::Copy(buf));*/
+/*}*/
+
+// ---- P R O C E S S I N G ---------------------------------------------------
+
+bool ServerLayer::IsValidMsg(const std::string_view& msg) { return false; }
+void ServerLayer::OnCommand(std::string_view cmd)
+{
+
+    std::vector<std::string> tokens = utils::SplitString(cmd, "\r\n");
+
+    if (tokens.empty())
+        return LOG_ERROR_TAG("SERVER", "Empty command");
+
+    if (tokens[0] == "shutdown" || tokens[0] == "SHUTDOWN")
+        return aero::Application::Get().Shutdown();
+    if (tokens[0] == "restart" || tokens[0] == "RESTART" || tokens[0] == "reboot" || tokens[0] == "REBOOT")
+        return aero::Application::Get().Restart();
+    if (tokens[0] == "ver" || tokens[0] == "VER" || tokens[0] == "version" || tokens[0] == "VERSION")
+        return m_TCP->SendString("Aiolos (c) MPS Server Emulator v.2024.0\r\n>");
+    if (tokens[0] == "status" || tokens[0] == "STATUS")
+        return m_TCP->SendString("STATUS: READY\r\n>");
+
+    LOG_ERROR_TAG("SERVER", "Inalid Command: `{}`", tokens[0]);
+
+    //- TODO(send this to the client that requested it and echo to console)
+    return;
 }

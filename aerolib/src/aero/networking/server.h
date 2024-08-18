@@ -28,6 +28,12 @@ typedef uint64_t ClientID;
 
 namespace aero::networking
 {
+struct ClientInfo
+{
+    uint64_t id;
+    std::string ip;
+    uint16_t port;
+};
 
 struct ServerInfo
 {
@@ -77,15 +83,15 @@ public:
 
 private:
 
-    void NetworkThreadFn();
+    void TcpThreadFn();
+    void UdpThreadFn();
     void PollData();
     void PollConnectionStatus();
-    
-    void SendDataThreadFn();
 
 private:
     ServerInfo m_ServerInfo;
 
+    std::map<uint64_t, ClientInfo> m_Connections;
     std::queue<Buffer> m_DataQueue;
     bool m_ServerIsRunning = false;
     bool m_ClientConnected = false;
