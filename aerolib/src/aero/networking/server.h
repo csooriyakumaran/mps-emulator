@@ -50,13 +50,16 @@ public:
     using DataReceivedFn     = std::function<void(const Buffer)>;
     using ClientConnectFn    = std::function<void()>;
     using ClientDisconnectFn = std::function<void()>;
+    /*using DataReceivedFn     = std::function<void(const Buffer)>;*/
+    /*using ClientConnectFn    = std::function<void()>;*/
+    /*using ClientDisconnectFn = std::function<void()>;*/
 
 public:
     Server(const ServerInfo& info);
     ~Server();
 
-    void Start();
-    void Stop();
+    void Start(); // setup the server socket
+    void Stop(); // close any connected sockets, and close server socket
 
     //---- S E T - C A L L B A C K S ------------------------------------------
 
@@ -82,6 +85,9 @@ public:
     bool IsClientConnected() const { return m_ClientConnected; }
 
 private:
+    void AcceptConnectionThreadFn();
+    void HandleConnectionThreadFn(uint64_t id);
+    void PollConnectionStatusFn();
 
     void TcpThreadFn();
     void UdpThreadFn();

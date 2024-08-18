@@ -52,10 +52,11 @@ void Server::Start()
     m_ServerIsRunning = true;
 
     if (m_ServerInfo.type == SocketType::TCP)
-        m_Threads.Enqueue(
-            [this]() { TcpThreadFn(); },
-            std::format("{}: {}", m_ServerInfo.name, "Listening Thread")
-        );
+        m_Threads.Enqueue([this](){ AcceptConnectionThreadFn(); }, "AcceptConnectionThreadFn");
+        /*m_Threads.Enqueue(*/
+        /*    [this]() { TcpThreadFn(); },*/
+        /*    std::format("{}: {}", m_ServerInfo.name, "Listening Thread")*/
+        /*);*/
 
     /*m_Threads.Enqueue([this]() { SendDataThreadFn(); }, "Data Tranfer Thread");*/
 }
@@ -73,6 +74,73 @@ void Server::Stop()
 
     CloseSocket(m_ServerSocket);
     CleanupNetworking();
+}
+
+void Server::AcceptConnectionThreadFn()
+{
+    while (m_ServerIsRunning)
+    {
+        LOG_INFO_TAG(m_ServerInfo.name, "Listening for connections on port {}", m_ServerInfo.port);
+        if(!ListenForConnection(m_ServerSocket))
+            continue;
+
+        Socket conn;
+        if(!AcceptConnection(m_ServerSocket, conn))
+            continue;
+
+        char ipstr[INET_ADDRSTRLEN];
+        inet_ntop(
+            conn.address.sin_family, &(conn.address.sin_addr), ipstr,
+            INET_ADDRSTRLEN
+        );
+
+        auto& client = m_Connections[(uint64_t)conn.socket];
+        client.id = (uint64_t)conn.socket;
+        client.ip = std::string(ipstr);
+        client.port = conn.address.sin_port;
+
+        LOG_INFO_TAG(m_ServerInfo.name, "Connection esbatlished with {}:{}", client.ip, client.port);
+        m_Threads.Enqueue([this, client](){ HandleConnectionThreadFn(client.id); });
+
+    }
+}
+
+void Server::HandleConnectionThreadFn(uint64_t id)
+{
+    Buffer buf;
+    buf.Allocate(m_ServerInfo.buffer_size);
+
+    while (m_ServerIsRunning)
+    {
+        buf.Zero();
+        //- are we still accepting messages from this socket?
+        if (m_Connections.find(id) == m_Connections.end())
+            break;
+
+        auto& client = m_Connections[id];
+
+        LOG_DEBUG_TAG(m_ServerInfo.name, "Waiting for data from client at {}:{}", client.ip, client.port); 
+
+        //- blocking
+        int bytes_read = recv((SOCKET)id, (char*)buf.data, (int)buf.size, 0);
+
+        if (bytes_read < 0)
+        {
+            LOG_ERROR_TAG(m_ServerInfo.name, "Failed on recv");
+            break;
+        }
+        if (bytes_read == 0)
+        {
+            LOG_WARN_TAG(m_ServerInfo.name, "Client disconnected from the server");
+            return;
+        }
+
+        if (m_DataReceivedCallback)
+            m_DataReceivedCallback(Buffer::Copy(buf.data, bytes_read));
+
+    }
+
+    buf.Release();
 }
 
 void Server::TcpThreadFn()
@@ -102,10 +170,6 @@ void Server::TcpThreadFn()
             INET_ADDRSTRLEN
         );
 
-        auto& client = m_Connections[(uint64_t)m_ClientSocket.socket];
-        client.id = (uint64_t)m_ClientSocket.socket;
-        client.ip = std::string(ipstr);
-        client.port = m_ClientSocket.address.sin_port;
 
         LOG_INFO_TAG(
             m_ServerInfo.name, "Client connection established from {}:{}", ipstr,
@@ -130,44 +194,6 @@ void Server::TcpThreadFn()
     LOG_DEBUG_TAG(m_ServerInfo.name, "Finishing NetworkThreadFn");
 }
 
-/*void HandleConnection(unit64_t s)*/
-/*{*/
-/*    Buffer buf;*/
-/*    buf.Allocate(m_ServerInfo.buffer_size);*/
-/**/
-/*    while (m_ServerIsRunning)*/
-/*    {*/
-/*        buf.Zero();*/
-/*        //- are we still accepting messages from this socket?*/
-/*        if (m_Connections.find(s) == m_Connections.end())*/
-/*            break;*/
-/**/
-/*        auto& info = m_Connetions[s];*/
-/**/
-/*        LOG_INFO_TAG(m_ServerInfo.name, "Waiting for data from client at {}:{}", info.ip, info.port); */
-/**/
-/*        //- blocking*/
-/*        int bytes_read = recv((SOCKET)s, (char*)buf.data, (int)buf.size, 0);*/
-/**/
-/*        if (bytes_read < 0)*/
-/*        {*/
-/*            LOG_ERROR_TAG(m_ServerInfo.name, "Failed on recv");*/
-/*            break;*/
-/*        }*/
-/*        if (bytes_read == 0)*/
-/*        {*/
-/*            LOG_WARN_TAG(m_ServerInfo.name, "Client disconnected from the server");*/
-/*            return;*/
-/*        }*/
-/**/
-/*        if (m_DataReceivedCallback)*/
-/*            m_DataReceivedCallback(Buffer::Copy(buf.data, bytes_read));*/
-/**/
-/*    }*/
-/**/
-/*    buf.Release();*/
-/*    CloseSocket(s);*/
-/*}*/
 
 void Server::PollData()
 {
@@ -249,36 +275,44 @@ void Server::PollConnectionStatus()
 
 void Server::SendBuffer(Buffer buf)
 {
-    if (!m_ClientConnected)
+    for (auto& [id, client] : m_Connections)
     {
-        LOG_ERROR_TAG(
-            m_ServerInfo.name, "No clients connected. Cannot set msg `{}`", buf.As<char>()
-        );
-        return;
-    }
-
-    if (!m_ServerIsRunning)
-    {
-        LOG_ERROR_TAG(
-            m_ServerInfo.name, "Server is not running. Cannot set msg `{}`", buf.As<char>()
-        );
-        return;
-    }
-
-    LOG_DEBUG_TAG(m_ServerInfo.name, "Attempting to send msg to client {}", buf.As<char>());
-
-    if (send(m_ClientSocket.socket, (char*)buf.data, (int)buf.size, 0) == SOCKET_ERROR)
-    {
-        LOG_ERROR_TAG(
-            m_ServerInfo.name,
-            "Failed to send data. Client must have disconnected. Close the client socket"
-        );
-        CloseSocket(m_ClientSocket);
-        m_ClientConnected = false;
-        if (m_ClientDisconnectCallback)
-            m_ClientDisconnectCallback();
+        send((SOCKET)client.id, (char*)buf.data, (int)buf.size, 0);
     }
 }
+
+/*void Server::SendBuffer(Buffer buf)*/
+/*{*/
+/*    if (!m_ClientConnected)*/
+/*    {*/
+/*        LOG_ERROR_TAG(*/
+/*            m_ServerInfo.name, "No clients connected. Cannot set msg `{}`", buf.As<char>()*/
+/*        );*/
+/*        return;*/
+/*    }*/
+/**/
+/*    if (!m_ServerIsRunning)*/
+/*    {*/
+/*        LOG_ERROR_TAG(*/
+/*            m_ServerInfo.name, "Server is not running. Cannot set msg `{}`", buf.As<char>()*/
+/*        );*/
+/*        return;*/
+/*    }*/
+/**/
+/*    LOG_DEBUG_TAG(m_ServerInfo.name, "Attempting to send msg to client {}", buf.As<char>());*/
+/**/
+/*    if (send(m_ClientSocket.socket, (char*)buf.data, (int)buf.size, 0) == SOCKET_ERROR)*/
+/*    {*/
+/*        LOG_ERROR_TAG(*/
+/*            m_ServerInfo.name,*/
+/*            "Failed to send data. Client must have disconnected. Close the client socket"*/
+/*        );*/
+/*        CloseSocket(m_ClientSocket);*/
+/*        m_ClientConnected = false;*/
+/*        if (m_ClientDisconnectCallback)*/
+/*            m_ClientDisconnectCallback();*/
+/*    }*/
+/*}*/
 
 void Server::SendString(const std::string& str) { SendBuffer(Buffer(str.data(), str.size())); }
 
