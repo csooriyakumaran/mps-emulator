@@ -15,7 +15,7 @@ aero::Application* aero::CreateApplication(int argc, char** argv)
     spec.SleepMilliseconds = 2000;
 
     aero::Application* app = new aero::Application(spec);
-    app->PushLayer<ServerLayer>(opts.port);
+    app->PushLayer<ServerLayer>(opts.port, opts.enable_console);
 
     return app;
 }

@@ -16,7 +16,7 @@
 class ServerLayer : public aero::Layer
 {
 public:
-    ServerLayer(uint16_t port);
+    ServerLayer(uint16_t port, bool enable_console = true);
     ~ServerLayer();
 
     virtual void OnAttach() override;
@@ -51,6 +51,7 @@ private:
     /*std::unique_ptr<aero::networking::Server> m_UDP;*/
 
     //- user input console for server application
+    bool m_EnableConsole = true;
     std::unique_ptr<Console> m_Console;
     std::string m_CmdString;
 

@@ -11,8 +11,9 @@
 #include "utils/string-utils.h"
 
 //- Initialize members
-ServerLayer::ServerLayer(uint16_t port)
-    : m_Port(port)
+ServerLayer::ServerLayer(uint16_t port, bool enable_console)
+    : m_Port(port),
+      m_EnableConsole(enable_console)
 {
 }
 
@@ -20,8 +21,11 @@ ServerLayer::~ServerLayer() {}
 
 void ServerLayer::OnAttach()
 {
-    m_Console = std::make_unique<Console>();
-    m_Console->SetMessageCallback([this](std::string_view msg) { this->OnConsoleInput(msg); });
+    if (m_EnableConsole)
+    {
+        m_Console = std::make_unique<Console>();
+        m_Console->SetMessageCallback([this](std::string_view msg) { this->OnConsoleInput(msg); });
+    }
 
     //-set up the TCP server
     aero::networking::ServerInfo tcp_info;
@@ -69,7 +73,7 @@ void ServerLayer::OnConsoleInput(std::string_view msg)
 
     if (msg[0] == '/' && msg.size() > 1)
     {
-        std::string_view cmd(&msg[1], msg.size()-1);
+        std::string_view cmd(&msg[1], msg.size() - 1);
         OnCommand(cmd);
         return;
     }
@@ -79,7 +83,7 @@ void ServerLayer::OnConsoleInput(std::string_view msg)
 
 // ---- S E R V E R - C A L L B A C K S ---------------------------------------
 
-void ServerLayer::OnClientConnected() { }
+void ServerLayer::OnClientConnected() {}
 
 void ServerLayer::OnClientDisconnected() {}
 
@@ -90,7 +94,7 @@ void ServerLayer::OnDataReceived(const aero::Buffer buf)
 
     LOG_DEBUG_TAG("SERVER", "Data revieced from client `{}`", cmd);
 
-    //validate input
+    // validate input
 
     //- handle command
     OnCommand(cmd);
@@ -119,39 +123,76 @@ void ServerLayer::OnDataReceived(const aero::Buffer buf)
 // ---- P R O C E S S I N G ---------------------------------------------------
 
 bool ServerLayer::IsValidMsg(const std::string_view& msg) { return false; }
+
 void ServerLayer::OnCommand(std::string_view cmd)
 {
 
-    LOG_INFO_TAG("SERVER", R"(cmd: {})", cmd);
-    //- allow for ScanTel style connection where on char is sent at a time
-    if (cmd.size() == 1 && cmd[0] != '\r')
+    if (cmd.size() == 1) // connected via ScanTel, need to build the command
     {
-        m_CmdString += cmd;
-        return;
+        switch (cmd[0])
+        {
+        case (0x0d): // <CR>
+        {
+            break;
+        }
+        case (0x08): // backspace
+        {
+
+            if (!m_CmdString.empty())
+                m_CmdString.pop_back();
+            return;
+        }
+        case (0x1b): // <ESC> - TODO(Chris): this should be treated as a stop scan
+            break;
+        default:
+        {
+            m_CmdString += cmd;
+            return;
+        }
+        }
     }
-    if (cmd[0]== '\r')
+    else
     {
-        cmd = m_CmdString;
-        m_CmdString.clear();
+        m_CmdString = cmd;
     }
 
-    std::vector<std::string> tokens = utils::SplitString(cmd, "\r\n");
+    std::vector<std::string> tokens = utils::SplitString(m_CmdString, "\r\n");
+    m_CmdString.clear();
 
-    if (tokens.empty())
-        return LOG_ERROR_TAG("SERVER", "Empty command");
+    if (tokens[0][0] == 0x0d || tokens[0].empty()) // <CR>
+        return m_TCP->SendString("\r>");
+
+    if (tokens[0][0] == 0x1b) // <ESC>
+        return m_TCP->SendString("STOP\r\n>");
 
     if (tokens[0] == "shutdown" || tokens[0] == "SHUTDOWN")
+    {
+        if (m_EnableConsole)
+            m_TCP->SendString(
+                "Shuting down server: Requires manually stopping from the server console\r\n"
+            );
         return aero::Application::Get().Shutdown();
-    if (tokens[0] == "restart" || tokens[0] == "RESTART" || tokens[0] == "reboot" || tokens[0] == "REBOOT")
+    }
+
+    if (tokens[0] == "restart" || tokens[0] == "RESTART" || tokens[0] == "reboot" ||
+        tokens[0] == "REBOOT")
+    {
+        if (m_EnableConsole)
+            m_TCP->SendString(
+                "Retarting down server: Requires manually stopping from the server console\r\n"
+            );
         return aero::Application::Get().Restart();
-    if (tokens[0] == "ver" || tokens[0] == "VER" || tokens[0] == "version" || tokens[0] == "VERSION")
+    }
+
+    if (tokens[0] == "ver" || tokens[0] == "VER" || tokens[0] == "version" ||
+        tokens[0] == "VERSION")
         return m_TCP->SendString("Aiolos (c) MPS Server Emulator v.2024.0\r\n>");
+
     if (tokens[0] == "status" || tokens[0] == "STATUS")
         return m_TCP->SendString("STATUS: READY\r\n>");
 
     LOG_ERROR_TAG("SERVER", "Inalid Command: `{}`", tokens[0]);
-    m_TCP->SendString(std::string("Invalid Command: ") + std::string(tokens[0]));
+    m_TCP->SendString(std::string("Invalid Command: ") + std::string(tokens[0]) + "\r\n>");
 
-    //- TODO(send this to the client that requested it and echo to console)
     return;
 }

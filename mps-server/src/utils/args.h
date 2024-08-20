@@ -14,6 +14,7 @@ struct Options
 {
     uint16_t port = 65432;
     bool should_close = false;
+    bool enable_console = true;
 };
 
 static bool has_option_flag(const std::vector<std::string_view>& args, const std::string_view name)
@@ -61,6 +62,7 @@ static void PrintHelp(char* name)
     std::cout << "\nusage:\tmps-server.exe ";
 
     std::cout << "[-p <port> | --port <port>]\n\n";
+    std::cout << "[--disable-console]\n\n";
     
     std::cout << "\tThis program emulates a Scanivalve MPS4200 series pressure scanner \n";
     std::cout << "\tFor use in developing a client application for communicating with \n";
@@ -104,6 +106,7 @@ static Options ParseAguments(int argc, char** argv)
         else
             LOG_ERROR("Option flag --port must be followed by a numeric argument");
     }
+    opts.enable_console = !has_option_flag(args, "--disable-console");
     return opts;
 }
 
