@@ -122,6 +122,19 @@ bool ServerLayer::IsValidMsg(const std::string_view& msg) { return false; }
 void ServerLayer::OnCommand(std::string_view cmd)
 {
 
+    LOG_INFO_TAG("SERVER", R"(cmd: {})", cmd);
+    //- allow for ScanTel style connection where on char is sent at a time
+    if (cmd.size() == 1 && cmd[0] != '\r')
+    {
+        m_CmdString += cmd;
+        return;
+    }
+    if (cmd[0]== '\r')
+    {
+        cmd = m_CmdString;
+        m_CmdString.clear();
+    }
+
     std::vector<std::string> tokens = utils::SplitString(cmd, "\r\n");
 
     if (tokens.empty())
@@ -137,6 +150,7 @@ void ServerLayer::OnCommand(std::string_view cmd)
         return m_TCP->SendString("STATUS: READY\r\n>");
 
     LOG_ERROR_TAG("SERVER", "Inalid Command: `{}`", tokens[0]);
+    m_TCP->SendString(std::string("Invalid Command: ") + std::string(tokens[0]));
 
     //- TODO(send this to the client that requested it and echo to console)
     return;

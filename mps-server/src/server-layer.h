@@ -52,6 +52,7 @@ private:
 
     //- user input console for server application
     std::unique_ptr<Console> m_Console;
+    std::string m_CmdString;
 
 
     // std::queue<Packets> m_ScanDataQueue;
