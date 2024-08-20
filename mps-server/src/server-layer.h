@@ -33,7 +33,7 @@ private:
     // ---- S E R V E R - C A L L B A C K S -----------------------------------
     void OnClientConnected();
     void OnClientDisconnected();
-    void OnDataReceived(const aero::Buffer buf);
+    void OnDataReceived(uint64_t id, const aero::Buffer buf);
 
     // ----  T C P - S E R V E R ----------------------------------------------
     void SendMsg(std::string_view msg);
@@ -43,7 +43,7 @@ private:
 
     // ---- P R O C E S S I N G -----------------------------------------------
     bool IsValidMsg(const std::string_view& msg);
-    void OnCommand(std::string_view cmd);
+    void OnCommand(uint64_t id, std::string_view cmd);
 
 private:
     uint16_t m_Port = 0u;

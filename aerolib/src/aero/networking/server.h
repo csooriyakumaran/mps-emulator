@@ -47,7 +47,7 @@ struct ServerInfo
 class Server
 {
 public:
-    using DataReceivedFn     = std::function<void(const Buffer)>;
+    using DataReceivedFn     = std::function<void(uint64_t id, const Buffer)>;
     using ClientConnectFn    = std::function<void()>;
     using ClientDisconnectFn = std::function<void()>;
     /*using DataReceivedFn     = std::function<void(const Buffer)>;*/
@@ -69,13 +69,20 @@ public:
 
     //---- S E N D - D A T A --------------------------------------------------
 
-    void SendBuffer(Buffer buff);
-    void SendString(const std::string& msg);
+    void SendBuffer(uint64_t id, Buffer buff);
+    void SendString(uint64_t id, const std::string& msg);
+    void SendBufferToAll(Buffer buff);
+    void SendStringToAll(const std::string& msg);
 
     template<typename T>
-    void SendData(const T& data)
+    void SendData(uint64_t id, const T& data)
     {
-        SendBuffer(Buffer(&data, sizeof(T)));
+        SendBuffer(id, Buffer(&data, sizeof(T)));
+    }
+    template<typename T>
+    void SendDataToAll(const T& data)
+    {
+        SendBufferToAll(Buffer(&data, sizeof(T)));
     }
 
     //------------------------------------------------------------------------
@@ -89,10 +96,6 @@ private:
     void HandleConnectionThreadFn(uint64_t id);
     void PollConnectionStatusFn();
 
-    void TcpThreadFn();
-    void UdpThreadFn();
-    void PollData();
-    void PollConnectionStatus();
 
 private:
     ServerInfo m_ServerInfo;

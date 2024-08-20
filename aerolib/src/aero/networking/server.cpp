@@ -136,149 +136,27 @@ void Server::HandleConnectionThreadFn(uint64_t id)
         }
 
         if (m_DataReceivedCallback)
-            m_DataReceivedCallback(Buffer::Copy(buf.data, bytes_read));
+            m_DataReceivedCallback(id, Buffer::Copy(buf.data, bytes_read));
 
     }
 
     buf.Release();
 }
 
-void Server::TcpThreadFn()
+
+void Server::SendBuffer(uint64_t id, Buffer buf)
 {
-    m_ServerIsRunning = true;
-    //- as long as the server is running, keep the socket open for new connections
-    while (m_ServerIsRunning)
-    {
+    if ( m_Connections.find(id) == m_Connections.end())
+        return LOG_ERROR_TAG(m_ServerInfo.name, "No registered client with id {}", id);
 
-        if (!ListenForConnection(m_ServerSocket))
-        {
-            LOG_ERROR_TAG(m_ServerInfo.name, "Error while listening");
-            return;
-        }
+    auto& client = m_Connections[id];
 
-        LOG_INFO_TAG(m_ServerInfo.name, "Listening for connection on port {}", m_ServerInfo.port);
-
-        if (!AcceptConnection(m_ServerSocket, m_ClientSocket))
-        {
-            LOG_ERROR_TAG(m_ServerInfo.name, "Error while accepting");
-            return;
-        }
-        //- register connection
-        char ipstr[INET_ADDRSTRLEN];
-        inet_ntop(
-            m_ClientSocket.address.sin_family, &(m_ClientSocket.address.sin_addr), ipstr,
-            INET_ADDRSTRLEN
-        );
-
-
-        LOG_INFO_TAG(
-            m_ServerInfo.name, "Client connection established from {}:{}", ipstr,
-            m_ClientSocket.address.sin_port
-        );
-
-        m_ClientConnected = true;
-
-        if (m_ClientConnectCallback)
-            m_ClientConnectCallback();
-            /*m_ClientConnectCallback(client);*/
-
-        while (m_ClientConnected)
-        {
-            PollData();
-            PollConnectionStatus();
-            std::this_thread::sleep_for(std::chrono::milliseconds(10));
-        }
-
-        std::this_thread::sleep_for(std::chrono::milliseconds(10));
-    }
-    LOG_DEBUG_TAG(m_ServerInfo.name, "Finishing NetworkThreadFn");
+    send((SOCKET)client.id, (char*)buf.data, (int)buf.size, 0);
 }
-
-
-void Server::PollData()
-{
-    Buffer buf;
-    buf.Allocate(m_ServerInfo.buffer_size);
-    buf.Zero();
-
-    int offset = 0;
-    while (m_ClientConnected)
-    {
-
-        struct timeval tv = {0, 1000};
-        fd_set rfds;
-        FD_ZERO(&rfds);
-        FD_SET(m_ClientSocket.socket, &rfds);
-
-        int rec = select((int)m_ClientSocket.socket + 1, &rfds, NULL, NULL, &tv);
-
-        if (rec < 0)
-        {
-            LOG_ERROR_TAG(m_ServerInfo.name, "Failed to recievedata");
-            m_ClientConnected = false;
-            buf.Release();
-            break;
-        }
-
-        if (rec == 0)
-            break;
-
-        int bytes_read =
-            recv(m_ClientSocket.socket, (char*)buf.data + offset, (int)buf.size - offset, 0);
-
-        if (bytes_read < 0)
-        {
-            LOG_ERROR_TAG(m_ServerInfo.name, "Failed on rev");
-            m_ClientConnected = false;
-            CloseSocket(m_ClientSocket);
-            buf.Release();
-            return;
-        }
-        if (bytes_read == 0)
-        {
-            LOG_WARN_TAG(m_ServerInfo.name, "Client disconnected from the server");
-            m_ClientConnected = false;
-            CloseSocket(m_ClientSocket);
-            buf.Release();
-            return;
-        }
-
-        offset += bytes_read;
-    }
-
-    if (offset == 0)
-    {
-        buf.Release();
-        return;
-    }
-
-    if (m_DataReceivedCallback)
-        m_DataReceivedCallback(Buffer::Copy(buf.data, offset));
-
-    buf.Release();
-    return;
-}
-
-void Server::PollConnectionStatus()
-{
-    if (m_ServerInfo.type == SocketType::UDP)
-        return;
-
-    if (!m_ClientConnected)
-        return;
-
-    if (!PollConnection(m_ClientSocket))
-        m_ClientConnected = false;
-
-    return;
-}
-
-void Server::SendBuffer(Buffer buf)
+void Server::SendBufferToAll(Buffer buf)
 {
     for (auto& [id, client] : m_Connections)
-    {
         send((SOCKET)client.id, (char*)buf.data, (int)buf.size, 0);
-    }
 }
 
 /*void Server::SendBuffer(Buffer buf)*/
@@ -314,6 +192,7 @@ void Server::SendBuffer(Buffer buf)
 /*    }*/
 /*}*/
 
-void Server::SendString(const std::string& str) { SendBuffer(Buffer(str.data(), str.size())); }
+void Server::SendString(uint64_t id, const std::string& str) { SendBuffer(id, Buffer(str.data(), str.size())); }
+void Server::SendStringToAll(const std::string& str) { SendBufferToAll(Buffer(str.data(), str.size())); }
 
 } // namespace aero::networking
