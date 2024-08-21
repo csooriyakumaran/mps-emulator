@@ -38,6 +38,12 @@
 *.vcxproj.user
 *.vcxproj.filters
 
+# Makefiles
+Makefile
+**/Makefile
+*.make
+**/*.make
+
 # build and output directories
 **/build/
 **/bin/
