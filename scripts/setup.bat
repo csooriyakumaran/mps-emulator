@@ -3,16 +3,15 @@
 IF "%~1" == "" GOTO PrintHelp
 
 build-tools\premake\premake5.exe --file=build-project.lua %1
-build-tools\premake\premake5.exe --file=build-project.lua export-compile-commands
 
 GOTO Done
 
 :PrintHelp
 
 echo.
-echo Enter 'build.bat action' where action is one of the following:
+echo Usage: 'setup.bat ACTION'
 echo.
-echo   compile           Will generate make file then compile using the make file.
+echo ACTIONS:
 echo   clean             Remove all binaries and intermediate binaries and project files.
 echo   codelite          Generate CodeLite project files
 echo   gmake2            Generate GNU makefiles for Linux

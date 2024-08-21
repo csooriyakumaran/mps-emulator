@@ -1,13 +1,15 @@
 # MPS-EMULATOR
 
-## Building From Source
+An emulated MPS-42xx pressure scanner. Includes a TCP and UDP server that accepts commands and returns data to connected clients. 
 
-### Generating project files (Windows only)
+ [![Cpp Standard](https://img.shields.io/badge/C%2B%2B-11-blue.svg)](https://en.wikipedia.org/wiki/C%2B%2B11)
+---
+**Generating project files (Windows only)**
 ```console
-$ git clone --recursive https://github.com/csooriyakumaran/mps-emulator.git
+$ git clone  https://github.com/csooriyakumaran/mps-emulator.git
 $ cd mps-emulator
 ```
-generate build files for the target compiler
+Generate build files for the target compiler
 ```console
 $ scritps\setup.bat <target>
 ```
@@ -23,7 +25,6 @@ e.g.:
 ```console
 $ scritps\setup.bat 
 ```
-Atlernatively, navigate into the scripts directory and run the setup-vs2022.bat file from file explorere (i.e., double click). 
 
 ### Building project
 
@@ -51,12 +52,17 @@ The project and solution files can be removed by running
 $ scripts\setup.bat clean
 ```
 
-## Usage
-
-By default, the mps server opens tcp and udp sockets on port 65432, but this can be changed with the optional command line flag -p or --port followed by a port number. 
+## USAGE
 ```console
-$ mps-server.exe [ -p <port number> | --port <port number> ]
+$ mps-server.exe [<options>]
 ```
+### OPTIONS: 
+
+ ` -p <port number> ` 
+
+ `--port <port number> ` 
+ Specify port for the server to run
+
 Once running, connect to the server as any other scanner. If connecting from the same machine that is running the server, the ip will be 127.0.0.1 (e.g., localhost). 
 
 For testing, commands can be issued direclty from the server console, although in debug build, the number of logging statements that are printed makes this somewhat annoying. Commands issued via the consol will have their output echoed to all connected clients. Data will also be sent to listening clients. 
