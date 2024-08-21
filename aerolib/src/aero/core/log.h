@@ -35,20 +35,20 @@ static void PrintAssertMsg(std::string_view tag, std::string_view fmt="", Args&&
 } // namespace aero
 
 #if DEBUG
-    #define LOG_DEBUG(fmt, ...) ::aero::Log::PrintMsg(::aero::Log::Level::Debug, fmt,  "", __VA_ARGS__)
-    #define LOG_DEBUG_TAG(tag, fmt, ...) ::aero::Log::PrintMsg(::aero::Log::Level::Debug, fmt, tag, __VA_ARGS__)
+    #define LOG_DEBUG(fmt, ...) ::aero::Log::PrintMsg(::aero::Log::Level::Debug, fmt,  "", ##__VA_ARGS__)
+    #define LOG_DEBUG_TAG(tag, fmt, ...) ::aero::Log::PrintMsg(::aero::Log::Level::Debug, fmt, tag, ##__VA_ARGS__)
 #else
     #define LOG_DEBUG
     #define LOG_DEBUG_TAG
 #endif // DEBUG
 
-#define LOG_INFO(fmt, ...) ::aero::Log::PrintMsg(::aero::Log::Level::Info, fmt, "", __VA_ARGS__)
-#define LOG_WARN(fmt, ...) ::aero::Log::PrintMsg(::aero::Log::Level::Warn, fmt, "", __VA_ARGS__)
-#define LOG_ERROR(fmt, ...) ::aero::Log::PrintMsg(::aero::Log::Level::Error, fmt, "", __VA_ARGS__)
+#define LOG_INFO(fmt, ...) ::aero::Log::PrintMsg(::aero::Log::Level::Info, fmt, "", ##__VA_ARGS__)
+#define LOG_WARN(fmt, ...) ::aero::Log::PrintMsg(::aero::Log::Level::Warn, fmt, "", ##__VA_ARGS__)
+#define LOG_ERROR(fmt, ...) ::aero::Log::PrintMsg(::aero::Log::Level::Error, fmt, "", ##__VA_ARGS__)
 
-#define LOG_INFO_TAG(tag,fmt,  ...) ::aero::Log::PrintMsg(::aero::Log::Level::Info, fmt, tag, __VA_ARGS__)
-#define LOG_WARN_TAG(tag,fmt,  ...) ::aero::Log::PrintMsg(::aero::Log::Level::Warn, fmt, tag, __VA_ARGS__)
-#define LOG_ERROR_TAG(tag,fmt,  ...) ::aero::Log::PrintMsg(::aero::Log::Level::Error, fmt, tag, __VA_ARGS__)
+#define LOG_INFO_TAG(tag,fmt,  ...) ::aero::Log::PrintMsg(::aero::Log::Level::Info, fmt, tag, ##__VA_ARGS__)
+#define LOG_WARN_TAG(tag,fmt,  ...) ::aero::Log::PrintMsg(::aero::Log::Level::Warn, fmt, tag, ##__VA_ARGS__)
+#define LOG_ERROR_TAG(tag,fmt,  ...) ::aero::Log::PrintMsg(::aero::Log::Level::Error, fmt, tag, ##__VA_ARGS__)
 
 template<typename... Args>
 void aero::Log::PrintMsg(aero::Log::Level level, std::string_view fmt, std::string_view tag, Args&&... args)
