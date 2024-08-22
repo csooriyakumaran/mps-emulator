@@ -1,8 +1,10 @@
 # MPS-EMULATOR
 
-An emulated MPS-42xx pressure scanner. Includes a TCP and UDP server that accepts commands and returns data to connected clients. 
+An emulated MPS-42xx pressure scanner.
 
-## Generating project files (Windows)
+The emulator starts a TCP server on the default port 23 that accepts connections from multiple clients, and handles commands following the MPS format on a client-by-client basis. Scan data are generated psuedo-randomly following a normal distrubution with a standard deviation of ###. Scan data are transmitted to the requesting client via TCP connection or optionally (depending on the configuration) over a UDP stream. 
+
+## Generating project files
 
 1. Clone the repository
 ```console
@@ -20,30 +22,35 @@ This will generate a vs2022 solution file in the root, and project files in each
 | ACTION                   |  DESCRIPTION                                                  |
 | ------------------------ | ------------------------------------------------------------- |
 | `vs2022`                 | - generates visual studio solution and project files          |
-| `gmake`                  | - generates Makefiles for the gcc compiler
+| `gmake`                  | - generates Makefiles for the gcc compiler (i.e., if on linux)|
 | `clean`                  | - removes project files as well as compiled binaries          |
 | `export-compile-commands`| - generates compile_commands.json files for each build config |
 
-The `export-compile-commands` action requires the use of a custom premake module. See [`tarruda/premake-export-compile-commads`](https://github.com/tarruda/premake-export-compile-commands) for more details. 
+The `export-compile-commands` action requires the use of a custom premake module. See [`tarruda/premake-export-compile-commads`](https://github.com/tarruda/premake-export-compile-commands) for more details. This is only useful when not using an IDE. 
 
 
-## Building project
+## Building the project
 
-Compilation will depend on the selection of compiler. So far Visual studio 2022 and gcc, have been tested with the c++20 standard. [!TODO] does this actually work on both?!!
+Compilation will depend on the selection of compiler. So far Visual studio 2022 and gcc, have been tested with the c++20 standard.
 
+Build files will be added to the .\build\ directory, and the binaries will be added to the .\bin\ directory. Aerolib is compiled into a library that is statically linked into the mps-server executable. 
 
-### MSBuild (vs2022) TODO(Chris) just use msbuild nativity. 
+The executable is stand alone so can be freely copied or moved. 
+
+### Visual Studio (vs2022)
+
+Open the Visual Studio solution file and build/run the desired configuration from there. 
+
+### MSBuild (vs2022)
 
 If msbuild is installed on your system and in your system path, run the msbuild batch file from the root directory. 
 ```console
 $ scritps\msbuild.bat [CONFIGURTION] [COMMAND]
 ```
-
 | CONFIGURATION            | DESCRIPTION                                                   |
 | ------------------------ | ------------------------------------------------------------- |
 | `release`                | Compiles without debug symbols and O2 optimization            |
 | `debug`                  | Compiles with debug symbols and no optimization               |
-
 
 | COMMANDS                 |                                                               |
 | ------------------------ | ------------------------------------------------------------- |
@@ -56,20 +63,16 @@ e.g.:
 $ scritps\msbuild.bat clean
 $ scritps\msbuild.bat release run
 ```
-
-Alternatively, open the Visual Studio solutoin file and build/run from there. 
-
-Build files will be added to the .\build\ directory, and the binaries will be added to the .\bin\ directory. Aerolib is built into a library that is statically linked into the mps-server executable. 
-
-The executable is stand alone so can be freely copied or moved. 
-
-### Cleaning
-
 Intermediate and binary file can be removed by removing the .\bin\ and .\biuld\ directories, or by running
 ```console
 $ scripts\msbuild.bat clean
 ```
 This cleans both debug and release files. 
+### Make (gmake \| gmake2)
+
+For compliation on linux (not fully tested), or a windows development enviroment that uses the gnu toolchain (e.g.,[`wsl`](https://learn.microsoft.com/en-us/windows/wsl/install),  [`MSYS2`](https://www.msys2.org/) or [`mingw`](https://www.mingw-w64.org/)), the premake action `gmake` or `gmake2` can be used (instead of `vs2022`). This will generate makefiles that can be compiled using the [`gnu make`](https://www.gnu.org/software/make/) executable. 
+
+### Cleaning
 
 The project and solution files can be removed by running
 ```console
@@ -81,10 +84,10 @@ This will also remove compiled binaries.
 ```console
 $ mps-server.exe [<OPTIONS>] [<ARGUMENTS>]
 ```
-| OPTIONS              | ARGUMENTS             | DESCRIPTION                              |
-| -------------------- | --------------------- | ---------------------------------------- |
-| `-p`, `--port`       |`<port-number>`        | listening port for the server.           |
-| `--disable-console`  |                       | disable the local input console.         |
+| OPTIONS              | ARGUMENTS             | DESCRIPTION                                |
+| -------------------- | --------------------- | ------------------------------------------ |
+| `-p`, `--port`       |`<port-number>`        | listening port for the server. (default 23 |
+| `--disable-console`  |                       | disable the local input console.           |
 
 e.g.:
 ```console
@@ -92,13 +95,17 @@ $ mps-server.exe --port 23 --disable-console
 ```
 Once running, connect to the server as any other scanner. If connecting from the same machine that is running the server, the ip will be 127.0.0.1 (i.e., localhost), otherwise use the LAN address of the machine (be sure to configure the firewall to allow TCP and UDP traffic on the specified port). 
 
-The console runs a listening thread that waits for user input. The user can send TCP messages to all clients simply by typing them in the console and hitting enter. 
+### Local Console
 
-For testing, scanner commands can be issued direclty from the server console by prefixing the normal MPS commands with a `/` (e.g. `/scan`), although in the debug configuration build, the number of logging statements that are printed makes this somewhat annoying. Commands issued via the consol will have their output echoed to all connected clients. Data will also be sent to listening clients if the issued command calls for it. 
+If not disabled, a local console runs on a separate listening thread that waits for user input through stdin. The user can send TCP messages to all clients simply by typing them in the console and hitting enter. 
 
-Because the console waits for user input, it will hang on shutdown until something is written to stdin. Consequently, when not using the console it is better to use the `--disable-console` flag so that the server can be remotely restarted with the `reboot` or `restart` command, or shutdown with the `shutdown` command. 
+For testing, scanner commands can be issued direclty from the server console by prefixing the normal MPS commands with a `/` (e.g. `/scan`), although in the debug configuration build, the number of logging statements that are printed makes this somewhat annoying. Commands issued via the console will have their output echoed to all connected clients. Scan requests made from the console will result in data being streamed to all listening clients.
 
-Commands can be sent to the server from clients or the console following the same format as described in the MPS manual. That is, commands must be less than 79 characters, and must terminate with <CR><LF> (i.e., ascii-13 ascii-10). This implementation requires all upper case or all lower case.
+Because the console waits for user input, it will hang on reboot/shutdown until user input is written to stdin. Consequently, when not testing with the console it is better to use the `--disable-console` flag so that the server can be remotely restarted with the `reboot` or `restart` command, or stopped with the `shutdown` command. 
+
+### Command Formatting
+
+Commands can be sent to the server from clients or the console (if prefixed by `/`) following the same format as described in the MPS manual. That is, commands must be less than 79 characters, and must terminate with \<CR\>\<LF\> (i.e., ascii-13 ascii-10). This implementation requires all upper case or all lower case.
 
 e.g.:
 ```console
@@ -106,15 +113,54 @@ e.g.:
 ```
 will send the command `SET RATE` with the arguments `850` and `10`
 
-### Implemented commands
+To maintain compatibility with the ScanTel terminal emulator, which uses the TelNet protocol, the server accepts commands that are issued one character at a time (including backspaces) until a carriage return is sent. 
 
-| COMMANDS                            |                                 |
-| ----------------------------------- | ------------------------------- |
-| `VER`                               | Return the version              |
+### Commands and Syntax
+
+Below are listed the commands which must be sent as shown and temrinated with `<CR><LF>`. Argument parameters are shown inside `< >` and optional parameters are inclosed in `[ ]`.  The following exceptions to this are special characters:
+
+- `<BS>`: Backspace ( `0x08` )
+- `<TAB>`: Horizontal tab ( `0x09` )
+- `<LF>`: Line feed ( `0x0A` )
+- `<CR>`: Carriage retruen ( `0x0D` )
+- `<ESC>`: Escape ( `0x1B` )
+
+Equivalent or alias commands are separated by `|`.
+
+Consult the MPS manual for more detailed descriptions of each command, including examples. 
+
+> [!IMPORTANT] 
+> Not all commands are implemented (e.g., no FTP server is emulated)
+
+***GENERAL COMMANDS***
+
+| SYNTAX                              | DESCRIPTION                           |
+| ----------------------------------- | ------------------------------------- |
+| `VER`                               | Return the version                    |
+| `REBOOT` \| `RESTART`               | Restart the server                    |
+| `SHUTDOWN`                          | Shutdown the server                   |
+| `STOP` \| `<ESC>` (TelNet only)     | Stop a scan if one is started         |
+| `STATUS`                            | Returns the status. e.g. `STATUS: READY` or `STATUS: SCAN`                          |
+| `CALZ`                              | Start a zero-cal (in the emulator this just resets the normal distrubution mean of the scan sampler to zero)                          |
+| `VALVESTATE`                        | Returns the valve state (always `PX` for the emulator)                          |
+| `TRIG` \| <TAB>                     | Returns one frame of data (requires  `SET TRIG 1`)                          |
+| `TREAD [<MODULE>]`                 | Returns the (simulated) module temperature on all or requested module (from 1 to 8). |
+| `SAVE <cfg>`                        | Save the configuration (not implemented) |
+| `SCAN`                              | Start a scan                          |
+
+***LIST COMMANDS***
+
+| SYNTAX                              | DESCRIPTION                           |
+| ----------------------------------- | ------------------------------------- |
+| `LIST S`                            | Returns the scan settings             |
+| `LIST UDP`                          | Returns the UDP settings              |
+
+***SET COMMANDS***
+
+| SYNTAX                              | DESCRIPTION                           |
+| ----------------------------------- | ------------------------------------- |
 | `SET RATE <RATE> [<OUTPUT RATE>]`   | The emulator does not support  internal sampling<br> - `RATE` sets the scan rate in Hz<br> - `RATE` is simply overwritten by `OUTPUT RATE`. |
-| `SCAN`                              | Start a scan                    |
-| `STOP` \| `<ESC>` (TelNet only)     | Stop a scan if one is started   |
-| `REBOOT` \| `RESTART`               | Restart the server              |
-| `SHUTDOWN`                          | Shutdown the server             |
+| `SET ENUDP <OPT>`                   | `0`: Disable UDP<br>`1`: Enable UDP   |
+| `SET IPUDP <IP> <PORT>`             | Set the UPD target ip and port number (this is actually handled automatically in the emulator based on the address of the client which issues the `scan` command)|
 
 
