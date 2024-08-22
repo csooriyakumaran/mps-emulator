@@ -90,7 +90,7 @@ e.g.:
 ```console
 $ mps-server.exe --port 23 --disable-console
 ```
-Once running, connect to the server as any other scanner. If connecting from the same machine that is running the server, the ip will be 127.0.0.1 (e.g., localhost), otherwise use the LAN address of the machine (be sure to configure the firewall to allow TCP and UDP traffic on the specified port). 
+Once running, connect to the server as any other scanner. If connecting from the same machine that is running the server, the ip will be 127.0.0.1 (i.e., localhost), otherwise use the LAN address of the machine (be sure to configure the firewall to allow TCP and UDP traffic on the specified port). 
 
 The console runs a listening thread that waits for user input. The user can send TCP messages to all clients simply by typing them in the console and hitting enter. 
 
@@ -108,8 +108,13 @@ will send the command `SET RATE` with the arguments `850` and `10`
 
 ### Implemented commands
 
-- `SET RATE <rate> [<output rate>]`  Note: that internal sampling is not simulated, so `output rate` just overwrites `rate` if given
-- `SCAN`  Starts a simulated scan at the set rate
-- `STOP`  Stops the scan
-- `REBOOT | RESTART` Restarts the server, restoring defaults. Command line arguments are preserved. 
+| COMMANDS                            |                                 |
+| ----------------------------------- | ------------------------------- |
+| `VER`                               | Return the version              |
+| `SET RATE <RATE> [<OUTPUT RATE>]`   | The emulator does not support  internal sampling<br> - `RATE` sets the scan rate in Hz<br> - `RATE` is simply overwritten by `OUTPUT RATE`. |
+| `SCAN`                              | Start a scan                    |
+| `STOP` \| `<ESC>` (TelNet only)     | Stop a scan if one is started   |
+| `REBOOT` \| `RESTART`               | Restart the server              |
+| `SHUTDOWN`                          | Shutdown the server             |
+
 
