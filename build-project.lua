@@ -33,6 +33,7 @@ newaction {
         os.remove("./build/**.o")
         os.remove("./build/**.Build.CppClean.log")
         os.rmdir("./build")
+        os.rmdir("./compile_commands")
         print("Removing project files")
         os.rmdir("./.vs")
         os.remove("**.sln")

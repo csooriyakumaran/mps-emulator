@@ -4,6 +4,11 @@ IF "%~1" == "" GOTO PrintHelp
 
 build-tools\premake\premake5.exe --file=build-project.lua %1
 
+IF NOT "%~1" == "export-compile-commands" GOTO Done
+
+IF NOT EXIST .\build\ mkdir .\build
+mklink build\compile_commands.json compile_commands\debug.json
+
 GOTO Done
 
 :PrintHelp
