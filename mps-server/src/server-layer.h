@@ -11,6 +11,7 @@
 
 #include "aero/core/layer.h"
 #include "aero/networking/server.h"
+#include "scanivalve/mps.h"
 #include "console.h"
 
 class ServerLayer : public aero::Layer
@@ -48,6 +49,7 @@ private:
 private:
     uint16_t m_Port = 0u;
     std::unique_ptr<aero::networking::Server> m_TCP;
+    std::unique_ptr<mps::Mps> m_MPS;
     /*std::unique_ptr<aero::networking::Server> m_UDP;*/
 
     //- user input console for server application

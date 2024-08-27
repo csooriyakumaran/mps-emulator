@@ -37,7 +37,7 @@ aero::ThreadPool::ThreadPool(size_t workers)
 
 aero::ThreadPool::~ThreadPool()
 {
-    KillAll();
+    StopAll();
     {
         std::unique_lock<std::mutex> lock(m_QueueMutex);
         m_Stop = true;
@@ -57,7 +57,7 @@ void aero::ThreadPool::Enqueue(ThreadFn fn, std::string name)
     m_Condition.notify_one();
 }
 
-void aero::ThreadPool::KillAll()
+void aero::ThreadPool::StopAll()
 {
     
     for (auto& t : m_Threads)

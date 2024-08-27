@@ -25,7 +25,7 @@ public:
     ~ThreadPool();
 
     void Enqueue(ThreadFn fn, std::string name = "");
-    void KillAll();
+    void StopAll();
     void KillThread(); // need a way to keep track of threads
 
 private:

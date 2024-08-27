@@ -17,23 +17,23 @@ $ scritps\setup.bat <ACTION>
    --- e.g. ---
 $ scritps\setup.bat vs2022
 ```
-This will generate a vs2022 solution file in the root, and project files in each project directory (e.g., mps-server/mps-server.vcsproj). The build system is [`premake`](https://premake.github.io/), since I couldn't be bothered to learn CMake. To list the all supported compiler targets and premake actions run the `scritp/setup.bat` file with no arguments, or consult the premake documentation. The following should be all that is needed for this project. 
+This will generate a vs2022 solution file in the root, and project files in each project directory (e.g., mps-server/mps-server.vcsproj). The build system is [`premake`](https://premake.github.io/), since I couldn't be bothered to learn CMake. To list the all supported compiler targets and premake actions run the `scritp/setup.bat` file with no arguments, or consult the premake [`documentation`](https://premake.github.io/docs/). The following should be all that is needed for this project. 
 
-| ACTION                   |  DESCRIPTION                                                  |
-| ------------------------ | ------------------------------------------------------------- |
-| `vs2022`                 | - generates visual studio solution and project files          |
-| `gmake`                  | - generates Makefiles for the gcc compiler (i.e., if on linux)|
-| `clean`                  | - removes project files as well as compiled binaries          |
-| `export-compile-commands`| - generates compile_commands.json files for each build config |
+| ACTION                   |  DESCRIPTION                                                      |
+| ------------------------ | ----------------------------------------------------------------- |
+| `vs2022`                 | - generates visual studio solution and project files              |
+| `gmake`                  | - generates gnu Makefiles for the gcc compiler (i.e., if on linux)|
+| `clean`                  | - removes project files as well as compiled binaries              |
+| `export-compile-commands`| - generates compile_commands.json files for each build config     |
 
-The `export-compile-commands` action requires the use of a custom premake module. See [`tarruda/premake-export-compile-commads`](https://github.com/tarruda/premake-export-compile-commands) for more details. This is only useful when not using an IDE. 
+The `export-compile-commands` action requires the use of a custom premake module. See [`tarruda/premake-export-compile-commads`](https://github.com/tarruda/premake-export-compile-commands) for more details. This is only useful when using an IDE/editor that requires an external lsp client to serve language features like auto-completion, go-to-definitions, etc. 
 
 
 ## Building the project
 
-Compilation will depend on the selection of compiler. So far Visual studio 2022 and gcc, have been tested with the c++20 standard.
+Compilation will depend on the selection of compiler. So far Visual studio 2022 and gcc have been tested with the c++20 standard.
 
-Build files will be added to the .\build\ directory, and the binaries will be added to the .\bin\ directory. Aerolib is compiled into a library that is statically linked into the mps-server executable. 
+Intermediate binaries (like object files) are genearted in the `./build/` directory, and the binaries will be added to the `./bin/` directory. Aerolib is compiled into a library that is statically linked into the mps-server executable. 
 
 The executable is stand alone so can be freely copied or moved. 
 
@@ -113,7 +113,7 @@ e.g.:
 ```
 will send the command `SET RATE` with the arguments `850` and `10`
 
-To maintain compatibility with the ScanTel terminal emulator, which uses the TelNet protocol, the server accepts commands that are issued one character at a time (including backspaces) until a carriage return is sent. 
+To maintain compatibility with the ScanTel terminal emulator, which uses the TelNet protocol, the server accepts commands that are issued one character at a time (including backspaces to remove characters) until a carriage return is sent. 
 
 ### Commands and Syntax
 
@@ -137,15 +137,15 @@ Consult the MPS manual for more detailed descriptions of each command, including
 | SYNTAX                              | DESCRIPTION                           |
 | ----------------------------------- | ------------------------------------- |
 | `VER`                               | Return the version                    |
-| `REBOOT` \| `RESTART`               | Restart the server                    |
+| `REBOOT` \| `RESTART`               | Restart the server after closing all connections |
 | `SHUTDOWN`                          | Shutdown the server                   |
 | `STOP` \| `<ESC>` (TelNet only)     | Stop a scan if one is started         |
-| `STATUS`                            | Returns the status. e.g. `STATUS: READY` or `STATUS: SCAN`                          |
+| `STATUS`                            | Returns the status. e.g.:<br> - `STATUS: READY`<br> - `STATUS: SCAN`<br> - `STATUS: CALZ`|
 | `CALZ`                              | Start a zero-cal (in the emulator this just resets the normal distrubution mean of the scan sampler to zero)                          |
 | `VALVESTATE`                        | Returns the valve state (always `PX` for the emulator)                          |
-| `TRIG` \| <TAB>                     | Returns one frame of data (requires  `SET TRIG 1`)                          |
+| `TRIG` \| `<TAB>`                     | Returns one frame of data (requires  `SET TRIG 1`)                          |
 | `TREAD [<MODULE>]`                 | Returns the (simulated) module temperature on all or requested module (from 1 to 8). |
-| `SAVE <cfg>`                        | Save the configuration (not implemented) |
+| `SAVE [<cfg>]`                        | Save the configuration (not implemented) |
 | `SCAN`                              | Start a scan                          |
 
 ***LIST COMMANDS***
@@ -153,13 +153,14 @@ Consult the MPS manual for more detailed descriptions of each command, including
 | SYNTAX                              | DESCRIPTION                           |
 | ----------------------------------- | ------------------------------------- |
 | `LIST S`                            | Returns the scan settings             |
+| `LIST M`                            | Returns the ___ settings              |
 | `LIST UDP`                          | Returns the UDP settings              |
 
 ***SET COMMANDS***
 
 | SYNTAX                              | DESCRIPTION                           |
 | ----------------------------------- | ------------------------------------- |
-| `SET RATE <RATE> [<OUTPUT RATE>]`   | The emulator does not support  internal sampling<br> - `RATE` sets the scan rate in Hz<br> - `RATE` is simply overwritten by `OUTPUT RATE`. |
+| `SET RATE <RATE> [<OUTPUT RATE>]`   | Set the sampling and output rate of the scanner. <br> - `RATE` internal scan rate in Hz<br> - `OUTPUT RATE` rate at which data are sent. Defaults to `RATE` if ommitted. |
 | `SET ENUDP <OPT>`                   | `0`: Disable UDP<br>`1`: Enable UDP   |
 | `SET IPUDP <IP> <PORT>`             | Set the UPD target ip and port number (this is actually handled automatically in the emulator based on the address of the client which issues the `scan` command)|
 

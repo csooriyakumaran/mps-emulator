@@ -7,7 +7,7 @@ build-tools\premake\premake5.exe --file=build-project.lua %1
 IF NOT "%~1" == "export-compile-commands" GOTO Done
 
 IF NOT EXIST .\build\ mkdir .\build
-mklink build\compile_commands.json compile_commands\debug.json
+mklink build\compile_commands.json ..\compile_commands\debug.json
 
 GOTO Done
 

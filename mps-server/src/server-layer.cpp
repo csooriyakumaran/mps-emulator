@@ -8,6 +8,7 @@
 #include "aero/core/assert.h"
 #include "aero/core/log.h"
 
+#include "scanivalve/mps-config.h"
 #include "utils/string-utils.h"
 
 //- Initialize members
@@ -48,6 +49,10 @@ void ServerLayer::OnAttach()
     /**/
     /*m_UDP            = std::make_unique<aero::networking::Server>(udp_info);*/
     /*m_UDP->Start();*/
+    mps::ScannerCfg cfg;
+    m_MPS = std::make_unique<mps::Mps>(cfg);
+    m_MPS->Start();
+    m_MPS->StartScan();
 }
 
 void ServerLayer::OnDetach()
@@ -75,7 +80,7 @@ void ServerLayer::OnConsoleInput(std::string_view msg)
     if (msg[0] == '/' && msg.size() > 1)
     {
         std::string_view cmd(&msg[1], msg.size() - 1);
-        /*OnCommand(cmd); // TODO(chris): Handle this separately since we dont want to sent this to a single client*/
+        OnCommand(0, cmd); // TODO(chris): Handle this separately since we dont want to sent this to a single client
         return;
     }
 
@@ -174,6 +179,8 @@ void ServerLayer::OnCommand(uint64_t id, std::string_view cmd)
             );
         return aero::Application::Get().Shutdown();
     }
+    if (tokens[0] == "scan" || tokens[0] == "SCAN")
+        m_MPS->StartScan();
 
     if (tokens[0] == "restart" || tokens[0] == "RESTART" || tokens[0] == "reboot" ||
         tokens[0] == "REBOOT")

@@ -53,10 +53,6 @@ void Server::Start()
 
     if (m_ServerInfo.type == SocketType::TCP)
         m_Threads.Enqueue([this](){ AcceptConnectionThreadFn(); }, "AcceptConnectionThreadFn");
-        /*m_Threads.Enqueue(*/
-        /*    [this]() { TcpThreadFn(); },*/
-        /*    std::format("{}: {}", m_ServerInfo.name, "Listening Thread")*/
-        /*);*/
 
     /*m_Threads.Enqueue([this]() { SendDataThreadFn(); }, "Data Tranfer Thread");*/
 }
@@ -159,40 +155,9 @@ void Server::SendBufferToAll(Buffer buf)
         send((SOCKET)client.id, (char*)buf.data, (int)buf.size, 0);
 }
 
-/*void Server::SendBuffer(Buffer buf)*/
-/*{*/
-/*    if (!m_ClientConnected)*/
-/*    {*/
-/*        LOG_ERROR_TAG(*/
-/*            m_ServerInfo.name, "No clients connected. Cannot set msg `{}`", buf.As<char>()*/
-/*        );*/
-/*        return;*/
-/*    }*/
-/**/
-/*    if (!m_ServerIsRunning)*/
-/*    {*/
-/*        LOG_ERROR_TAG(*/
-/*            m_ServerInfo.name, "Server is not running. Cannot set msg `{}`", buf.As<char>()*/
-/*        );*/
-/*        return;*/
-/*    }*/
-/**/
-/*    LOG_DEBUG_TAG(m_ServerInfo.name, "Attempting to send msg to client {}", buf.As<char>());*/
-/**/
-/*    if (send(m_ClientSocket.socket, (char*)buf.data, (int)buf.size, 0) == SOCKET_ERROR)*/
-/*    {*/
-/*        LOG_ERROR_TAG(*/
-/*            m_ServerInfo.name,*/
-/*            "Failed to send data. Client must have disconnected. Close the client socket"*/
-/*        );*/
-/*        CloseSocket(m_ClientSocket);*/
-/*        m_ClientConnected = false;*/
-/*        if (m_ClientDisconnectCallback)*/
-/*            m_ClientDisconnectCallback();*/
-/*    }*/
-/*}*/
 
 void Server::SendString(uint64_t id, const std::string& str) { SendBuffer(id, Buffer(str.data(), str.size())); }
+
 void Server::SendStringToAll(const std::string& str) { SendBufferToAll(Buffer(str.data(), str.size())); }
 
 } // namespace aero::networking
