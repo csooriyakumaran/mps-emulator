@@ -205,7 +205,9 @@ void ServerLayer::OnCommand(uint64_t id, std::string_view cmd)
         return m_TCP->SendString(id, "Aiolos (c) MPS Server Emulator v.2024.0\r\n>");
 
     if (tokens[0] == "status" || tokens[0] == "STATUS")
-        return m_TCP->SendString(id, "STATUS: READY\r\n>");
+        return m_TCP->SendString(id, std::string("STATUS: ") +  m_MPS->GetStatus() + "\r\n>");
+
+        /*return m_TCP->SendString(id, "STATUS: READY\r\n>");*/
 
     std::string response = m_MPS->ParseCommands(tokens[0]);
     m_TCP->SendString(id, response);

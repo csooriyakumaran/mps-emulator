@@ -65,10 +65,15 @@ void mps::Mps::StartScan()
 
     m_naverages                  = (int)(m_cfg.framerate / m_cfg.out_rate);
     m_Scanning                   = true;
+    m_Status                     = mps::Status::SCAN;
     // LOG_INFO_TAG("MPS", "Scan started at {}", tp);
 }
 
-void mps::Mps::StopScan() { m_Scanning = false; }
+void mps::Mps::StopScan()
+{
+    m_Scanning = false;
+    m_Status   = mps::Status::READY;
+}
 
 void mps::Mps::ScanThreadFn()
 {
@@ -79,9 +84,9 @@ void mps::Mps::ScanThreadFn()
         {
             auto frame_end = frame_start + std::chrono::nanoseconds((int)(1e9 / m_cfg.out_rate));
 
-            auto dt          = frame_start - m_StartScanTime;
-            auto dt_s        = std::chrono::duration_cast<std::chrono::seconds>(dt);
-            auto dt_ns       = dt - dt_s;
+            auto dt        = frame_start - m_StartScanTime;
+            auto dt_s      = std::chrono::duration_cast<std::chrono::seconds>(dt);
+            auto dt_ns     = dt - dt_s;
 
             LOG_INFO_TAG(
                 "MPS", "Frame start time: {:.8f} s ({} Hz)", dt_s.count() + dt_ns.count() / 1e9,
@@ -91,7 +96,7 @@ void mps::Mps::ScanThreadFn()
             memset(p, 0, 64 * sizeof(float));
 
             auto subframe_start = frame_start;
-            for (int i = 0; i < m_naverages; ++i)
+            for (size_t i = 0; i < (size_t)m_naverages; ++i)
             {
                 auto subframe_end =
                     subframe_start + std::chrono::nanoseconds((int)(1e9 / m_cfg.framerate));
@@ -99,12 +104,12 @@ void mps::Mps::ScanThreadFn()
                 for (int j = 0; j < 64; ++j)
                     p[j] += Sample() / m_naverages;
 
-                auto sdt          = subframe_start - frame_start;
-                auto sdt_s        = std::chrono::duration_cast<std::chrono::seconds>(sdt);
-                auto sdt_ns       = sdt - sdt_s;
+                auto sdt    = subframe_start - frame_start;
+                auto sdt_s  = std::chrono::duration_cast<std::chrono::seconds>(sdt);
+                auto sdt_ns = sdt - sdt_s;
                 LOG_DEBUG_TAG(
-                    "MPS", "SubFrame {:04d}: {:.8f} s ({} Hz) P[0] = {:.4f}", i, sdt_s.count() + sdt_ns.count() / 1e9,
-                    m_cfg.framerate, p[0]
+                    "MPS", "SubFrame {:04d}: {:.8f} s ({} Hz) P[0] = {:.4f}", i,
+                    sdt_s.count() + sdt_ns.count() / 1e9, m_cfg.framerate, p[0]
                 );
 
                 std::this_thread::sleep_until(subframe_end);
@@ -113,13 +118,13 @@ void mps::Mps::ScanThreadFn()
             // for (int j = 0; j < 64; ++j)
             //     p[j] /= m_naverages;
 
-            auto end_dt          = frame_end - m_StartScanTime;
-            auto end_dt_s        = std::chrono::duration_cast<std::chrono::seconds>(end_dt);
-            auto end_dt_ns       = end_dt - end_dt_s;
+            auto end_dt    = frame_end - m_StartScanTime;
+            auto end_dt_s  = std::chrono::duration_cast<std::chrono::seconds>(end_dt);
+            auto end_dt_ns = end_dt - end_dt_s;
 
             LOG_INFO_TAG(
-                "MPS", "Frame end time: {:.8f} s ({} Hz) p[0] = {} Pa", end_dt_s.count() + end_dt_ns.count() / 1e9,
-                m_cfg.out_rate, p[0]
+                "MPS", "Frame end time: {:.8f} s ({} Hz) p[0] = {} Pa",
+                end_dt_s.count() + end_dt_ns.count() / 1e9, m_cfg.out_rate, p[0]
             );
 
             mps::BinaryPacket* data = m_Data.As<mps::BinaryPacket>();
@@ -202,5 +207,5 @@ std::string mps::Mps::ParseCommands(std::string cmd)
     }
 
     LOG_ERROR_TAG("MPS", "Inalid Command: `{}`", tokens[0]);
-    return "Invalid Command: `" + cmd + "`";
+    return "Invalid Command: `" + cmd + "`\r\n>";
 }
