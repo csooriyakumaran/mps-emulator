@@ -86,12 +86,12 @@ $ mps-server.exe [<OPTIONS>] [<ARGUMENTS>]
 ```
 | OPTIONS              | ARGUMENTS             | DESCRIPTION                                |
 | -------------------- | --------------------- | ------------------------------------------ |
-| `-p`, `--port`       |`<port-number>`        | listening port for the server. (default 23 |
+| `-p`, `--port`       |`<port-number>`        | listening port for the server. (default 23)|
 | `--disable-console`  |                       | disable the local input console.           |
 
 e.g.:
 ```console
-$ mps-server.exe --port 23 --disable-console
+$ mps-server.exe --port 1234 --disable-console
 ```
 Once running, connect to the server as any other scanner. If connecting from the same machine that is running the server, the ip will be 127.0.0.1 (i.e., localhost), otherwise use the LAN address of the machine (be sure to configure the firewall to allow TCP and UDP traffic on the specified port). 
 
