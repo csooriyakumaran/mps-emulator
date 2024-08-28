@@ -12,7 +12,7 @@ namespace args
 
 struct Options
 {
-    uint16_t port = 65432;
+    uint16_t port = 23;
     bool should_close = false;
     bool enable_console = true;
 };
