@@ -41,5 +41,5 @@ project "aerolib"
 
     filter  "configurations:Release"
         defines { "RELEASE" }
-        optimize "On"
+        optimize "Full"
 
