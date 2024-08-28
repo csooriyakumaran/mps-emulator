@@ -4,9 +4,9 @@
 #include <cstring>
 #include <iostream>
 
+#include "aero/core/log.h"
 #include "scanivalve/mps-config.h"
 #include "scanivalve/mps-data.h"
-#include "aero/core/log.h"
 #include "utils/string-utils.h"
 
 mps::Mps::Mps(const mps::ScannerCfg& cfg)
@@ -45,26 +45,26 @@ void mps::Mps::StartScan()
 
     mps::BinaryPacket* data = m_Data.As<mps::BinaryPacket>();
 
-    data->type = 0x0A; // BinaryPacket
-    data->size = sizeof(BinaryPacket);
-    data->serial_number            = m_cfg.serial_number;
-    data->framerate                = m_cfg.framerate;
-    data->valve_status             = GetValveStatus();
-    data->unit_index               = m_cfg.unit_index;
-    data->unit_conversion          = mps::ScanUnitConversion[m_cfg.unit_index];
+    data->type              = 0x0A; // BinaryPacket
+    data->size              = sizeof(BinaryPacket);
+    data->serial_number     = m_cfg.serial_number;
+    data->framerate         = m_cfg.framerate;
+    data->valve_status      = GetValveStatus();
+    data->unit_index        = m_cfg.unit_index;
+    data->unit_conversion   = mps::ScanUnitConversion[m_cfg.unit_index];
     // auto tp          = std::chrono::high_resolution_clock::now();
-    auto tp          = std::chrono::steady_clock::now();
-    auto tp_s        = std::chrono::time_point_cast<std::chrono::seconds>(tp);
-    auto tp_ns       = tp - tp_s;
+    auto tp                      = std::chrono::steady_clock::now();
+    auto tp_s                    = std::chrono::time_point_cast<std::chrono::seconds>(tp);
+    auto tp_ns                   = tp - tp_s;
 
+    m_StartScanTime              = tp;
+    m_StartScanTimeS             = static_cast<uint32_t>(tp_s.time_since_epoch().count());
+    m_StartScanTimeS             = static_cast<uint32_t>(tp_ns.count());
+    data->ptp_scan_start_time_s  = m_StartScanTimeS;
+    data->ptp_scan_start_time_ns = m_StartScanTimeNS;
 
-    m_StartScanTime  = tp;
-    m_StartScanTimeS = static_cast<uint32_t>(tp_s.time_since_epoch().count());
-    m_StartScanTimeS = static_cast<uint32_t>(tp_ns.count());
-    data->ptp_scan_start_time_s    = m_StartScanTimeS;
-    data->ptp_scan_start_time_ns   = m_StartScanTimeNS;
-
-    m_Scanning       = true;
+    m_naverages                  = (int)(m_cfg.framerate / m_cfg.out_rate);
+    m_Scanning                   = true;
     // LOG_INFO_TAG("MPS", "Scan started at {}", tp);
 }
 
@@ -77,42 +77,64 @@ void mps::Mps::ScanThreadFn()
         auto frame_start = m_StartScanTime;
         while (m_Scanning)
         {
-            //auto frame_start = std::chrono::steady_clock::now();
-            auto frame_end   = frame_start + std::chrono::nanoseconds((int)(1e9/ m_cfg.framerate));
+            auto frame_end = frame_start + std::chrono::nanoseconds((int)(1e9 / m_cfg.out_rate));
 
             auto dt          = frame_start - m_StartScanTime;
             auto dt_s        = std::chrono::duration_cast<std::chrono::seconds>(dt);
             auto dt_ns       = dt - dt_s;
 
-            mps::BinaryPacket* data = m_Data.As<mps::BinaryPacket>();
-            data->frame += 1;
+            LOG_INFO_TAG(
+                "MPS", "Frame start time: {:.8f} s ({} Hz)", dt_s.count() + dt_ns.count() / 1e9,
+                m_cfg.out_rate
+            );
             float p[64];
             memset(p, 0, 64 * sizeof(float));
 
+            auto subframe_start = frame_start;
             for (int i = 0; i < m_naverages; ++i)
             {
+                auto subframe_end =
+                    subframe_start + std::chrono::nanoseconds((int)(1e9 / m_cfg.framerate));
+
                 for (int j = 0; j < 64; ++j)
-                    p[j] += Sample();
+                    p[j] += Sample() / m_naverages;
 
-                /*std::this_thread::sleep_for(std::chrono::milliseconds((int)(1000 /
-                 * m_cfg.framerate)));*/
+                auto sdt          = subframe_start - frame_start;
+                auto sdt_s        = std::chrono::duration_cast<std::chrono::seconds>(sdt);
+                auto sdt_ns       = sdt - sdt_s;
+                LOG_DEBUG_TAG(
+                    "MPS", "SubFrame {:04d}: {:.8f} s ({} Hz) P[0] = {:.4f}", i, sdt_s.count() + sdt_ns.count() / 1e9,
+                    m_cfg.framerate, p[0]
+                );
+
+                std::this_thread::sleep_until(subframe_end);
+                subframe_start = subframe_end;
             }
-            for (int j = 0; j < 64; ++j)
-                p[j] /= m_naverages;
+            // for (int j = 0; j < 64; ++j)
+            //     p[j] /= m_naverages;
 
-            std::memcpy(&p, &data->pressure, 64 * sizeof(float));
+            auto end_dt          = frame_end - m_StartScanTime;
+            auto end_dt_s        = std::chrono::duration_cast<std::chrono::seconds>(end_dt);
+            auto end_dt_ns       = end_dt - end_dt_s;
 
-            data->frame_time_s  = static_cast<uint32_t>(dt_s.count());
-            data->frame_time_ns = static_cast<uint32_t>(dt_ns.count());
-            LOG_INFO_TAG("MPS", "Frame Time: {:.8f} s ({} Hz)", dt_s.count() + dt_ns.count() / 1e9 , m_cfg.framerate);
+            LOG_INFO_TAG(
+                "MPS", "Frame end time: {:.8f} s ({} Hz) p[0] = {} Pa", end_dt_s.count() + end_dt_ns.count() / 1e9,
+                m_cfg.out_rate, p[0]
+            );
+
+            mps::BinaryPacket* data = m_Data.As<mps::BinaryPacket>();
+            // data->frame += 1;
+            // std::memcpy(&p, &data->pressure, 64 * sizeof(float));
+            // data->frame_time_s  = static_cast<uint32_t>(dt_s.count());
+            // data->frame_time_ns = static_cast<uint32_t>(dt_ns.count());
 
             std::this_thread::sleep_until(frame_end);
             frame_start = frame_end;
         }
 
-        m_drift += 0.0001f;
+        m_drift += 0.01f;
 
-        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }
 }
 
@@ -122,12 +144,12 @@ float mps::Mps::Sample()
 }
 
 /*
-Commands can come from TCP clients, TelNet clients, or a .cfg file. 
+Commands can come from TCP clients, TelNet clients, or a .cfg file.
 These should be first split into separate commands (i.e., by \r\n) before
-passing to this function. 
+passing to this function.
 
-This function will then further divide each command into tokens and parse them 
-according the the requested action. 
+This function will then further divide each command into tokens and parse them
+according the the requested action.
 
 
 */
@@ -143,11 +165,11 @@ std::string mps::Mps::ParseCommands(std::string cmd)
 
         if (tokens[1] == "RATE" || tokens[1] == "rate")
         {
-            // [0] [1]   [2]    [3] 
+            // [0] [1]   [2]    [3]
             // SET RATE <RATE> [<OUT RATE>]
             if (tokens.size() < 3)
                 return "Invalid Command: `SET RATE` requires at least 1 arguments\r\n>";
-            
+
             if (tokens.size() >= 3)
                 std::sscanf(tokens[2].c_str(), "%f", &m_cfg.framerate);
 
@@ -158,10 +180,7 @@ std::string mps::Mps::ParseCommands(std::string cmd)
 
             return cmd + "\r\n>";
         }
-
     }
-
-
 
     if (tokens[0] == "LIST" || tokens[0] == "list")
     {
@@ -174,11 +193,14 @@ std::string mps::Mps::ParseCommands(std::string cmd)
 
             return cmd + "\r\n>";
         }
+    }
 
+    if (tokens[0] == "CALZ" || tokens[0] == "calz")
+    {
+        m_drift = 0;
+        return "Status: Calibrating\r\n>";
     }
 
     LOG_ERROR_TAG("MPS", "Inalid Command: `{}`", tokens[0]);
-    return "Invalid Command: `" + cmd + "`"; 
-
+    return "Invalid Command: `" + cmd + "`";
 }
-

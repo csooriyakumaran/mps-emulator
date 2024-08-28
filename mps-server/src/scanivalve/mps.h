@@ -68,7 +68,7 @@ private:
     bool m_Running      = false;
     bool m_Scanning     = false;
 
-    uint8_t m_naverages = 1;
+    uint32_t m_naverages = 1;
     float m_drift       = 0.0f;
 
     std::mt19937 m_RandomGenerator;
