@@ -47,7 +47,7 @@ public:
     void StartScan();
     void StopScan();
 
-    std::string ParseCommands(std::vector<std::string> cmds);
+    std::string ParseCommands(std::string cmds);
 
     std::string GetStatus() { return StatusStr[(size_t)m_Status]; }
     Status GetStatus() const { return m_Status; }
@@ -59,7 +59,7 @@ private:
     float Sample();
 
 private:
-    aero::Buffer m_CurrentValueTable;
+    aero::Buffer m_Data;
     std::jthread m_ScanningThread;
 
     ScannerCfg m_cfg;
@@ -73,7 +73,8 @@ private:
 
     std::mt19937 m_RandomGenerator;
     std::normal_distribution<float> m_NormalDistribution;
-    std::chrono::time_point<std::chrono::high_resolution_clock> m_StartScanTime;
+    // std::chrono::time_point<std::chrono::high_resolution_clock> m_StartScanTime;
+    std::chrono::time_point<std::chrono::steady_clock> m_StartScanTime;
     uint32_t m_StartScanTimeS;
     uint32_t m_StartScanTimeNS;
 };

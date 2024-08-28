@@ -52,11 +52,11 @@ void ServerLayer::OnAttach()
     mps::ScannerCfg cfg;
     m_MPS = std::make_unique<mps::Mps>(cfg);
     m_MPS->Start();
-    m_MPS->StartScan();
 }
 
 void ServerLayer::OnDetach()
 {
+    m_MPS->Shutdown();
     m_TCP->Stop();
     /*m_UDP->Stop();*/
 }
@@ -80,7 +80,9 @@ void ServerLayer::OnConsoleInput(std::string_view msg)
     if (msg[0] == '/' && msg.size() > 1)
     {
         std::string_view cmd(&msg[1], msg.size() - 1);
-        OnCommand(0, cmd); // TODO(chris): Handle this separately since we dont want to sent this to a single client
+        OnCommand(
+            0, cmd
+        ); // TODO(chris): Handle this separately since we dont want to sent this to a single client
         return;
     }
 
@@ -149,7 +151,11 @@ void ServerLayer::OnCommand(uint64_t id, std::string_view cmd)
             return;
         }
         case (0x1b): // <ESC> - TODO(Chris): this should be treated as a stop scan
+        {
+            m_CmdString.clear();
+            m_CmdString += 0x1b;
             break;
+        }
         default:
         {
             m_CmdString += cmd;
@@ -168,8 +174,10 @@ void ServerLayer::OnCommand(uint64_t id, std::string_view cmd)
     if (tokens[0][0] == 0x0d || tokens[0].empty()) // <CR>
         return m_TCP->SendString(id, "\r>");
 
-    if (tokens[0][0] == 0x1b) // <ESC>
-        return m_TCP->SendString(id, "STOP\r\n>");
+    if (tokens[0][0] == 0x1b || tokens[0] == "STOP" || tokens[0] == "stop") // <ESC>
+        return m_MPS->StopScan();
+
+    // return m_TCP->SendString(id, "STOP\r\n>");
 
     if (tokens[0] == "shutdown" || tokens[0] == "SHUTDOWN")
     {
@@ -180,7 +188,7 @@ void ServerLayer::OnCommand(uint64_t id, std::string_view cmd)
         return aero::Application::Get().Shutdown();
     }
     if (tokens[0] == "scan" || tokens[0] == "SCAN")
-        m_MPS->StartScan();
+        return m_MPS->StartScan();
 
     if (tokens[0] == "restart" || tokens[0] == "RESTART" || tokens[0] == "reboot" ||
         tokens[0] == "REBOOT")
@@ -199,8 +207,11 @@ void ServerLayer::OnCommand(uint64_t id, std::string_view cmd)
     if (tokens[0] == "status" || tokens[0] == "STATUS")
         return m_TCP->SendString(id, "STATUS: READY\r\n>");
 
-    LOG_ERROR_TAG("SERVER", "Inalid Command: `{}`", tokens[0]);
-    m_TCP->SendString(id, std::string("Invalid Command: ") + std::string(tokens[0]) + "\r\n>");
+    std::string response = m_MPS->ParseCommands(tokens[0]);
+    m_TCP->SendString(id, response);
+
+    // LOG_ERROR_TAG("SERVER", "Inalid Command: `{}`", tokens[0]);
+    // m_TCP->SendString(id, std::string("Invalid Command: ") + std::string(tokens[0]) + "\r\n>");
 
     return;
 }
