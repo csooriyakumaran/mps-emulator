@@ -1,14 +1,8 @@
 #include "server-layer.h"
-#include <chrono>
-#include <format>
-#include <iostream>
-#include <sstream>
 
 #include "aero/core/application.h"
-#include "aero/core/assert.h"
 #include "aero/core/log.h"
 
-#include "scanivalve/mps-config.h"
 #include "utils/string-utils.h"
 
 //- Initialize members
@@ -36,7 +30,7 @@ void ServerLayer::OnAttach()
     tcp_info.buffer_size = 1024;
 
     m_TCP                = std::make_unique<aero::networking::Server>(tcp_info);
-    m_TCP->SetClientConCallback([this]() { this->OnClientConnected(); });
+    m_TCP->SetClientConCallback([this](uint64_t id) { this->OnClientConnected(id); });
     m_TCP->SetDataRecvCallback([this](uint64_t id, const aero::Buffer buf)
                                { this->OnDataReceived(id, buf); });
     m_TCP->Start();
@@ -91,9 +85,12 @@ void ServerLayer::OnConsoleInput(std::string_view msg)
 
 // ---- S E R V E R - C A L L B A C K S ---------------------------------------
 
-void ServerLayer::OnClientConnected() {}
+void ServerLayer::OnClientConnected(uint64_t id) {
 
-void ServerLayer::OnClientDisconnected() {}
+    LOG_INFO_TAG("SEVER", "Connection esbablished with 
+}
+
+void ServerLayer::OnClientDisconnected(uint64_t id) {}
 
 void ServerLayer::OnDataReceived(uint64_t id, const aero::Buffer buf)
 {
@@ -205,9 +202,9 @@ void ServerLayer::OnCommand(uint64_t id, std::string_view cmd)
         return m_TCP->SendString(id, "Aiolos (c) MPS Server Emulator v.2024.0\r\n>");
 
     if (tokens[0] == "status" || tokens[0] == "STATUS")
-        return m_TCP->SendString(id, std::string("STATUS: ") +  m_MPS->GetStatus() + "\r\n>");
+        return m_TCP->SendString(id, std::string("STATUS: ") + m_MPS->GetStatus() + "\r\n>");
 
-        /*return m_TCP->SendString(id, "STATUS: READY\r\n>");*/
+    /*return m_TCP->SendString(id, "STATUS: READY\r\n>");*/
 
     std::string response = m_MPS->ParseCommands(tokens[0]);
     m_TCP->SendString(id, response);

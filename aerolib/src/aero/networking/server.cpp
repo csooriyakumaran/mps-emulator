@@ -1,5 +1,4 @@
 #include "aero/networking/server.h"
-#include <chrono>
 
 #include "aero/core/log.h"
 
@@ -52,7 +51,7 @@ void Server::Start()
     m_ServerIsRunning = true;
 
     if (m_ServerInfo.type == SocketType::TCP)
-        m_Threads.Enqueue([this](){ AcceptConnectionThreadFn(); }, "AcceptConnectionThreadFn");
+        m_Threads.Enqueue([this]() { AcceptConnectionThreadFn(); }, "AcceptConnectionThreadFn");
 
     /*m_Threads.Enqueue([this]() { SendDataThreadFn(); }, "Data Tranfer Thread");*/
 }
@@ -63,10 +62,15 @@ void Server::Stop()
         m_ServerInfo.name, "Stopping {} server. closing port {}",
         SocketTypeName[(size_t)m_ServerInfo.type], m_ServerInfo.port
     );
-    m_ServerIsRunning = false;
-    m_ClientConnected = false;
 
-    // for connected clients close sockets.
+    m_ServerIsRunning = false;
+
+    m_Threads.StopAll();
+
+    for (auto& [id, client] : m_Connections)
+        CloseSocket(client.id);
+
+    m_Connections.clear();
 
     CloseSocket(m_ServerSocket);
     CleanupNetworking();
@@ -77,27 +81,28 @@ void Server::AcceptConnectionThreadFn()
     while (m_ServerIsRunning)
     {
         LOG_INFO_TAG(m_ServerInfo.name, "Listening for connections on port {}", m_ServerInfo.port);
-        if(!ListenForConnection(m_ServerSocket))
+        if (!ListenForConnection(m_ServerSocket))
             continue;
 
         Socket conn;
-        if(!AcceptConnection(m_ServerSocket, conn))
+        if (!AcceptConnection(m_ServerSocket, conn))
             continue;
 
         char ipstr[INET_ADDRSTRLEN];
-        inet_ntop(
-            conn.address.sin_family, &(conn.address.sin_addr), ipstr,
-            INET_ADDRSTRLEN
-        );
+        inet_ntop(conn.address.sin_family, &(conn.address.sin_addr), ipstr, INET_ADDRSTRLEN);
 
         auto& client = m_Connections[(uint64_t)conn.socket];
-        client.id = (uint64_t)conn.socket;
-        client.ip = std::string(ipstr);
-        client.port = conn.address.sin_port;
+        client.id    = (uint64_t)conn.socket;
+        client.ip    = std::string(ipstr);
+        client.port  = conn.address.sin_port;
 
-        LOG_INFO_TAG(m_ServerInfo.name, "Connection esbatlished with {}:{}", client.ip, client.port);
-        m_Threads.Enqueue([this, client](){ HandleConnectionThreadFn(client.id); });
+        LOG_INFO_TAG(
+            m_ServerInfo.name, "Connection esbatlished with {}:{}", client.ip, client.port
+        );
+        m_Threads.Enqueue([this, client]() { HandleConnectionThreadFn(client.id); });
 
+        if (m_ClientConnectCallback)
+            m_ClientConnectCallback(client.id);
     }
 }
 
@@ -115,7 +120,9 @@ void Server::HandleConnectionThreadFn(uint64_t id)
 
         auto& client = m_Connections[id];
 
-        LOG_DEBUG_TAG(m_ServerInfo.name, "Waiting for data from client at {}:{}", client.ip, client.port); 
+        LOG_DEBUG_TAG(
+            m_ServerInfo.name, "Waiting for data from client at {}:{}", client.ip, client.port
+        );
 
         //- blocking
         int bytes_read = recv((SOCKET)id, (char*)buf.data, (int)buf.size, 0);
@@ -128,21 +135,25 @@ void Server::HandleConnectionThreadFn(uint64_t id)
         if (bytes_read == 0)
         {
             LOG_WARN_TAG(m_ServerInfo.name, "Client disconnected from the server");
-            return;
+            break;
         }
 
         if (m_DataReceivedCallback)
             m_DataReceivedCallback(id, Buffer::Copy(buf.data, bytes_read));
-
     }
 
     buf.Release();
-}
+    if (m_Connections.find(id) == m_Connections.end())
+        return;
 
+    m_Connections.erase(id);
+
+
+}
 
 void Server::SendBuffer(uint64_t id, Buffer buf)
 {
-    if ( m_Connections.find(id) == m_Connections.end())
+    if (m_Connections.find(id) == m_Connections.end())
         return LOG_ERROR_TAG(m_ServerInfo.name, "No registered client with id {}", id);
 
     auto& client = m_Connections[id];
@@ -155,9 +166,14 @@ void Server::SendBufferToAll(Buffer buf)
         send((SOCKET)client.id, (char*)buf.data, (int)buf.size, 0);
 }
 
+void Server::SendString(uint64_t id, const std::string& str)
+{
+    SendBuffer(id, Buffer(str.data(), str.size()));
+}
 
-void Server::SendString(uint64_t id, const std::string& str) { SendBuffer(id, Buffer(str.data(), str.size())); }
-
-void Server::SendStringToAll(const std::string& str) { SendBufferToAll(Buffer(str.data(), str.size())); }
+void Server::SendStringToAll(const std::string& str)
+{
+    SendBufferToAll(Buffer(str.data(), str.size()));
+}
 
 } // namespace aero::networking

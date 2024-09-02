@@ -195,25 +195,27 @@ static bool PollConnection(const Socket& s)
         char ipstr[INET_ADDRSTRLEN];
         inet_ntop(s.address.sin_family, &(s.address.sin_addr), ipstr, INET_ADDRSTRLEN);
         LOG_WARN_TAG(
-            "Networking", "Connection with client at {}:{} was lost", ipstr,
-            s.address.sin_port
+            "Networking", "Connection with client at {}:{} was lost", ipstr, s.address.sin_port
         );
         return false;
     }
     return true;
 }
 
-
-
-static void CloseSocket(Socket& s)
+static void CloseSocket(SOCKET s)
 {
-#ifndef PLATFORM_WINDOWS
-    close(s.socket);
+
+#ifdef PLATFORM_WINDOWS
+    closesocket(s);
     return;
 #else
-    closesocket(s.socket);
+    close(s);
     return;
 #endif // PLATFORM_WINDOWS
+}
+static void CloseSocket(Socket& s)
+{
+    CloseSocket(s.socket);
 }
 
 } // namespace aero::networking

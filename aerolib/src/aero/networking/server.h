@@ -24,10 +24,9 @@
 #include "aero/core/threads.h"
 #include "aero/networking/socket.h"
 
-typedef uint64_t ClientID;
-
 namespace aero::networking
 {
+
 struct ClientInfo
 {
     uint64_t id;
@@ -48,18 +47,15 @@ class Server
 {
 public:
     using DataReceivedFn     = std::function<void(uint64_t id, const Buffer)>;
-    using ClientConnectFn    = std::function<void()>;
-    using ClientDisconnectFn = std::function<void()>;
-    /*using DataReceivedFn     = std::function<void(const Buffer)>;*/
-    /*using ClientConnectFn    = std::function<void()>;*/
-    /*using ClientDisconnectFn = std::function<void()>;*/
+    using ClientConnectFn    = std::function<void(uint64_t id)>;
+    using ClientDisconnectFn = std::function<void(uint64_t id)>;
 
 public:
     Server(const ServerInfo& info);
     ~Server();
 
     void Start(); // setup the server socket
-    void Stop(); // close any connected sockets, and close server socket
+    void Stop();  // close any connected sockets, and close server socket
 
     //---- S E T - C A L L B A C K S ------------------------------------------
 
@@ -86,16 +82,14 @@ public:
     }
 
     //------------------------------------------------------------------------
-    void KickClient();
+    void KickClient(uint64_t id);
 
     bool IsRunning() const { return m_ServerIsRunning; }
-    bool IsClientConnected() const { return m_ClientConnected; }
+    bool IsClientConnected(uint64_t id) const;
 
 private:
     void AcceptConnectionThreadFn();
     void HandleConnectionThreadFn(uint64_t id);
-    void PollConnectionStatusFn();
-
 
 private:
     ServerInfo m_ServerInfo;
@@ -103,7 +97,6 @@ private:
     std::map<uint64_t, ClientInfo> m_Connections;
     std::queue<Buffer> m_DataQueue;
     bool m_ServerIsRunning = false;
-    bool m_ClientConnected = false;
     Socket m_ServerSocket;
     Socket m_ClientSocket;
 

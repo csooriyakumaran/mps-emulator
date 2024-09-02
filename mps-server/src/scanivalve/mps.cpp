@@ -115,8 +115,6 @@ void mps::Mps::ScanThreadFn()
                 std::this_thread::sleep_until(subframe_end);
                 subframe_start = subframe_end;
             }
-            // for (int j = 0; j < 64; ++j)
-            //     p[j] /= m_naverages;
 
             auto end_dt    = frame_end - m_StartScanTime;
             auto end_dt_s  = std::chrono::duration_cast<std::chrono::seconds>(end_dt);
