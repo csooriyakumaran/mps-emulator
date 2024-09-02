@@ -30,6 +30,7 @@ static std::string StatusStr[(size_t)Status::_COUNT] = {"READY", "SCAN", "CALZ",
 
 struct ScannerCfg
 {
+    int32_t fps           = 0;
     float framerate       = 10;
     float out_rate        = 10;
     int32_t unit_index    = 23;
@@ -47,6 +48,7 @@ public:
     void StartScan();
     void StopScan();
 
+    void CalZ();
     std::string ParseCommands(std::string cmds);
 
     std::string GetStatus() { return StatusStr[(size_t)m_Status]; }
@@ -63,13 +65,14 @@ private:
     std::jthread m_ScanningThread;
 
     ScannerCfg m_cfg;
-    Status m_Status     = Status::READY;
+    Status m_Status      = Status::READY;
 
-    bool m_Running      = false;
-    bool m_Scanning     = false;
+    bool m_Running       = false;
+    bool m_Scanning      = false;
+    bool m_Calibrating   = false;
 
     uint32_t m_naverages = 1;
-    float m_drift       = 0.0f;
+    float m_drift        = 0.0f;
 
     std::mt19937 m_RandomGenerator;
     std::normal_distribution<float> m_NormalDistribution;

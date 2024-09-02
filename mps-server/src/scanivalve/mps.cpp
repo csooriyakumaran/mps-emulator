@@ -3,6 +3,7 @@
 #include <chrono>
 #include <cstring>
 #include <iostream>
+#include <sstream>
 
 #include "aero/core/log.h"
 #include "scanivalve/mps-config.h"
@@ -30,6 +31,12 @@ void mps::Mps::Shutdown()
 
     if (m_ScanningThread.joinable())
         m_ScanningThread.join();
+}
+
+void mps::Mps::CalZ()
+{
+    m_Calibrating = true;
+    m_Status = mps::Status::CALZ;
 }
 
 void mps::Mps::StartScan()
@@ -79,6 +86,14 @@ void mps::Mps::ScanThreadFn()
 {
     while (m_Running)
     {
+        if (m_Calibrating)
+        {
+            std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+            m_drift = 0;
+            m_Calibrating = false;
+            m_Status = mps::Status::READY;
+        }
+
         auto frame_start = m_StartScanTime;
         while (m_Scanning)
         {
@@ -126,13 +141,16 @@ void mps::Mps::ScanThreadFn()
             );
 
             mps::BinaryPacket* data = m_Data.As<mps::BinaryPacket>();
-            // data->frame += 1;
+            data->frame += 1;
             // std::memcpy(&p, &data->pressure, 64 * sizeof(float));
             // data->frame_time_s  = static_cast<uint32_t>(dt_s.count());
             // data->frame_time_ns = static_cast<uint32_t>(dt_ns.count());
 
             std::this_thread::sleep_until(frame_end);
             frame_start = frame_end;
+
+            if ( m_cfg.fps && (m_cfg.fps == data->frame) )
+                this->StopScan();
         }
 
         m_drift += 0.01f;
@@ -159,9 +177,10 @@ according the the requested action.
 std::string mps::Mps::ParseCommands(std::string cmd)
 {
 
-    std::vector<std::string> tokens = utils::SplitString(cmd, " ");
+    std::vector<std::string> tokens = utils::SplitString(cmd, " \r\n");
 
-    if (tokens[0] == "VER" || tokens[0] == "ver" || tokens[0] == "VERSION" || tokens[0] == "version")
+    if (tokens[0] == "VER" || tokens[0] == "ver" || tokens[0] == "VERSION" ||
+        tokens[0] == "version")
         return "Aiolos (c) MPS Server Emulator v.2024.0\r\n>";
 
     if (tokens[0] == "STATUS" || tokens[0] == "status")
@@ -169,18 +188,17 @@ std::string mps::Mps::ParseCommands(std::string cmd)
 
     if (tokens[0] == "CALZ" || tokens[0] == "calz")
     {
-        m_drift = 0;
-        return "Status: Calibrating\r\n>";
+        this->CalZ();
+        return "\r\n>";
     }
 
     if (tokens[0] == "SCAN" || tokens[0] == "scan")
     {
         this->StartScan();
-        std::string tmp =  std::format("Scan started at {:%H:%M:%S}\r\n", std::chrono::time_point_cast<std::chrono::seconds>(m_StartScanTime));
-        return tmp;
+        return "Scan started\r\n";
     }
 
-    if (tokens[0] == "STOP" || tokens[0] == "stop" || tokens[0][0] == 0x1b ) // <ESC>
+    if (tokens[0] == "STOP" || tokens[0] == "stop" || tokens[0][0] == 0x1b) // <ESC>
     {
         this->StopScan();
         return "\r\n>";
@@ -206,6 +224,19 @@ std::string mps::Mps::ParseCommands(std::string cmd)
 
             LOG_INFO_TAG("MPS", "Frame Rate: {}, Out Rate: {}", m_cfg.framerate, m_cfg.out_rate);
 
+            return cmd + "\r\n>";
+        }
+
+        if (tokens[1] == "FPS" || tokens[1] == "fps")
+        {
+
+            // [0] [1]   [2]
+            // SET FPS <fps> 
+            if (tokens.size() < 3)
+                return "Invalid Command: `SET FPS` requires 1 argument\r\n>";
+
+            std::sscanf(tokens[2].c_str(), "%d", &m_cfg.fps);
+            LOG_INFO_TAG("MPS", "Frames Per Scan: {}", m_cfg.fps);
             return cmd + "\r\n>";
         }
     }
