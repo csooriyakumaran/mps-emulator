@@ -1,7 +1,5 @@
 @echo off
 
-
-
 IF "%~1" == "debug" GOTO BUILDDEBUG
 IF "%~1" == "release" GOTO BUILDRELEASE
 IF "%~1" == "clean" GOTO CLEAN

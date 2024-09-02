@@ -68,7 +68,7 @@ void Server::Stop()
     m_Threads.StopAll();
 
     for (auto& [id, client] : m_Connections)
-        CloseSocket(client.id);
+        KickClient(id);
 
     m_Connections.clear();
 
@@ -143,12 +143,18 @@ void Server::HandleConnectionThreadFn(uint64_t id)
     }
 
     buf.Release();
-    if (m_Connections.find(id) == m_Connections.end())
-        return;
+    KickClient(id);
+
+}
+
+void Server::KickClient(uint64_t id)
+{
+
+    if (m_ClientDisconnectCallback)
+        m_ClientDisconnectCallback(id);
 
     m_Connections.erase(id);
-
-
+    CloseSocket(id);
 }
 
 void Server::SendBuffer(uint64_t id, Buffer buf)
@@ -174,6 +180,11 @@ void Server::SendString(uint64_t id, const std::string& str)
 void Server::SendStringToAll(const std::string& str)
 {
     SendBufferToAll(Buffer(str.data(), str.size()));
+}
+
+bool Server::IsClientConnected(uint64_t id) const
+{
+   return !(m_Connections.find(id) == m_Connections.end());
 }
 
 } // namespace aero::networking

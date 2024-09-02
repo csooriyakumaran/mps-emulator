@@ -88,7 +88,7 @@ void mps::Mps::ScanThreadFn()
             auto dt_s      = std::chrono::duration_cast<std::chrono::seconds>(dt);
             auto dt_ns     = dt - dt_s;
 
-            LOG_INFO_TAG(
+            LOG_DEBUG_TAG(
                 "MPS", "Frame start time: {:.8f} s ({} Hz)", dt_s.count() + dt_ns.count() / 1e9,
                 m_cfg.out_rate
             );
@@ -120,7 +120,7 @@ void mps::Mps::ScanThreadFn()
             auto end_dt_s  = std::chrono::duration_cast<std::chrono::seconds>(end_dt);
             auto end_dt_ns = end_dt - end_dt_s;
 
-            LOG_INFO_TAG(
+            LOG_DEBUG_TAG(
                 "MPS", "Frame end time: {:.8f} s ({} Hz) p[0] = {} Pa",
                 end_dt_s.count() + end_dt_ns.count() / 1e9, m_cfg.out_rate, p[0]
             );
@@ -161,6 +161,31 @@ std::string mps::Mps::ParseCommands(std::string cmd)
 
     std::vector<std::string> tokens = utils::SplitString(cmd, " ");
 
+    if (tokens[0] == "VER" || tokens[0] == "ver" || tokens[0] == "VERSION" || tokens[0] == "version")
+        return "Aiolos (c) MPS Server Emulator v.2024.0\r\n>";
+
+    if (tokens[0] == "STATUS" || tokens[0] == "status")
+        return std::string("STATUS: ") + this->GetStatus() + "\r\n>";
+
+    if (tokens[0] == "CALZ" || tokens[0] == "calz")
+    {
+        m_drift = 0;
+        return "Status: Calibrating\r\n>";
+    }
+
+    if (tokens[0] == "SCAN" || tokens[0] == "scan")
+    {
+        this->StartScan();
+        std::string tmp =  std::format("Scan started at {:%H:%M:%S}\r\n", std::chrono::time_point_cast<std::chrono::seconds>(m_StartScanTime));
+        return tmp;
+    }
+
+    if (tokens[0] == "STOP" || tokens[0] == "stop" || tokens[0][0] == 0x1b ) // <ESC>
+    {
+        this->StopScan();
+        return "\r\n>";
+    }
+
     if (tokens[0] == "SET" || tokens[0] == "set")
     {
         if (tokens.size() < 2)
@@ -196,12 +221,6 @@ std::string mps::Mps::ParseCommands(std::string cmd)
 
             return cmd + "\r\n>";
         }
-    }
-
-    if (tokens[0] == "CALZ" || tokens[0] == "calz")
-    {
-        m_drift = 0;
-        return "Status: Calibrating\r\n>";
     }
 
     LOG_ERROR_TAG("MPS", "Inalid Command: `{}`", tokens[0]);

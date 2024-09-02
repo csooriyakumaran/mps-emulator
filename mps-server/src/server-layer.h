@@ -47,15 +47,17 @@ private:
     void OnCommand(uint64_t id, std::string_view cmd);
 
 private:
-    uint16_t m_Port = 0u;
+    bool m_EnableConsole = true;
+    std::unique_ptr<Console> m_Console = nullptr;
     std::unique_ptr<aero::networking::Server> m_TCP;
     std::unique_ptr<mps::Mps> m_MPS;
+
+    uint16_t m_Port = 0u;
     /*std::unique_ptr<aero::networking::Server> m_UDP;*/
 
     //- user input console for server application
-    bool m_EnableConsole = true;
-    std::unique_ptr<Console> m_Console;
-    std::string m_CmdString;
+    /*std::string m_CmdString;*/
+    std::map<uint64_t, std::string> m_Cmds;
 
 
     // std::queue<Packets> m_ScanDataQueue;

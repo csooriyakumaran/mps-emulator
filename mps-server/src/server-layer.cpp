@@ -31,6 +31,7 @@ void ServerLayer::OnAttach()
 
     m_TCP                = std::make_unique<aero::networking::Server>(tcp_info);
     m_TCP->SetClientConCallback([this](uint64_t id) { this->OnClientConnected(id); });
+    m_TCP->SetClientDisconCallback([this](uint64_t id) { this->OnClientDisconnected(id); });
     m_TCP->SetDataRecvCallback([this](uint64_t id, const aero::Buffer buf)
                                { this->OnDataReceived(id, buf); });
     m_TCP->Start();
@@ -85,12 +86,17 @@ void ServerLayer::OnConsoleInput(std::string_view msg)
 
 // ---- S E R V E R - C A L L B A C K S ---------------------------------------
 
-void ServerLayer::OnClientConnected(uint64_t id) {
-
-    LOG_INFO_TAG("SEVER", "Connection esbablished with 
+void ServerLayer::OnClientConnected(uint64_t id)
+{
+    LOG_INFO_TAG("SERVER", "Connection esbablished with client id {}", id);
+    LOG_INFO_TAG("SERVER", "IsClientConnected = {}", m_TCP->IsClientConnected(id));
 }
 
-void ServerLayer::OnClientDisconnected(uint64_t id) {}
+void ServerLayer::OnClientDisconnected(uint64_t id)
+{
+    LOG_INFO_TAG("SERVER", "Connection lost with client id {}", id);
+    m_Cmds.erase(id);
+}
 
 void ServerLayer::OnDataReceived(uint64_t id, const aero::Buffer buf)
 {
@@ -132,6 +138,7 @@ bool ServerLayer::IsValidMsg(const std::string_view& msg) { return false; }
 void ServerLayer::OnCommand(uint64_t id, std::string_view cmd)
 {
 
+    std::string& client_cmd = m_Cmds[id];
     if (cmd.size() == 1) // connected via ScanTel, need to build the command
     {
         switch (cmd[0])
@@ -143,36 +150,34 @@ void ServerLayer::OnCommand(uint64_t id, std::string_view cmd)
         case (0x08): // backspace
         {
 
-            if (!m_CmdString.empty())
-                m_CmdString.pop_back();
+            if (!client_cmd.empty())
+                client_cmd.pop_back();
             return;
         }
         case (0x1b): // <ESC> - TODO(Chris): this should be treated as a stop scan
         {
-            m_CmdString.clear();
-            m_CmdString += 0x1b;
+            client_cmd.clear();
+            client_cmd += 0x1b;
             break;
         }
         default:
         {
-            m_CmdString += cmd;
+            client_cmd += cmd;
             return;
         }
         }
     }
     else
     {
-        m_CmdString = cmd;
+        client_cmd = cmd;
     }
 
-    std::vector<std::string> tokens = utils::SplitString(m_CmdString, "\r\n");
-    m_CmdString.clear();
+    std::vector<std::string> tokens = utils::SplitString(client_cmd, "\r\n");
+    client_cmd.clear();
 
     if (tokens[0][0] == 0x0d || tokens[0].empty()) // <CR>
         return m_TCP->SendString(id, "\r>");
 
-    if (tokens[0][0] == 0x1b || tokens[0] == "STOP" || tokens[0] == "stop") // <ESC>
-        return m_MPS->StopScan();
 
     // return m_TCP->SendString(id, "STOP\r\n>");
 
@@ -184,8 +189,6 @@ void ServerLayer::OnCommand(uint64_t id, std::string_view cmd)
             );
         return aero::Application::Get().Shutdown();
     }
-    if (tokens[0] == "scan" || tokens[0] == "SCAN")
-        return m_MPS->StartScan();
 
     if (tokens[0] == "restart" || tokens[0] == "RESTART" || tokens[0] == "reboot" ||
         tokens[0] == "REBOOT")
@@ -197,14 +200,6 @@ void ServerLayer::OnCommand(uint64_t id, std::string_view cmd)
         return aero::Application::Get().Restart();
     }
 
-    if (tokens[0] == "ver" || tokens[0] == "VER" || tokens[0] == "version" ||
-        tokens[0] == "VERSION")
-        return m_TCP->SendString(id, "Aiolos (c) MPS Server Emulator v.2024.0\r\n>");
-
-    if (tokens[0] == "status" || tokens[0] == "STATUS")
-        return m_TCP->SendString(id, std::string("STATUS: ") + m_MPS->GetStatus() + "\r\n>");
-
-    /*return m_TCP->SendString(id, "STATUS: READY\r\n>");*/
 
     std::string response = m_MPS->ParseCommands(tokens[0]);
     m_TCP->SendString(id, response);
