@@ -7,8 +7,13 @@
 #include <string>
 #include <thread>
 #include <vector>
+#include <queue>
 
 #include "aero/core/buffer.h"
+#include "aero/networking/server.h"
+#include "aero/core/threads.h"
+
+#include "mps-data.h"
 
 namespace mps
 {
@@ -57,12 +62,16 @@ public:
 
 private:
     void ScanThreadFn();
+    void TransferThreadFn();
     uint8_t NumAverages();
     float Sample();
 
 private:
     aero::Buffer m_Data;
+    std::queue<mps::BinaryPacket> m_FrameQueue;
     std::jthread m_ScanningThread;
+    
+    aero::ThreadPool m_ThreadPool;
 
     ScannerCfg m_cfg;
     Status m_Status      = Status::READY;

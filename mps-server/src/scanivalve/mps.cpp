@@ -11,7 +11,7 @@
 #include "utils/string-utils.h"
 
 mps::Mps::Mps(const mps::ScannerCfg& cfg)
-    : m_cfg(cfg)
+    : m_cfg(cfg), m_ThreadPool(2)
 {
 }
 
@@ -21,7 +21,10 @@ void mps::Mps::Start()
 {
     m_Running        = true;
     m_ScanningThread = std::jthread([this]() { this->ScanThreadFn(); });
+    m_ThreadPool.Enqueu( [this]() { this->ScanThreadFn(); }, "Scanning Thread");
+    m_ThreadPool.Enqueu( [this]() { this->TransferThreadFn(); "Transfer Thread"});
 }
+
 
 void mps::Mps::Shutdown()
 {
@@ -80,8 +83,15 @@ void mps::Mps::StopScan()
 {
     m_Scanning = false;
     m_Status   = mps::Status::READY;
+
+    
+    m_FrameQueue.clear();
 }
 
+void mps::Mps::TransferThreadFn(std::shared_ptr<aero::Server> svr )
+{
+
+}
 void mps::Mps::ScanThreadFn()
 {
     while (m_Running)
@@ -142,15 +152,22 @@ void mps::Mps::ScanThreadFn()
 
             mps::BinaryPacket* data = m_Data.As<mps::BinaryPacket>();
             data->frame += 1;
-            // std::memcpy(&p, &data->pressure, 64 * sizeof(float));
-            // data->frame_time_s  = static_cast<uint32_t>(dt_s.count());
-            // data->frame_time_ns = static_cast<uint32_t>(dt_ns.count());
+
+            std::memcpy(&p, &data->pressure, 64 * sizeof(float));
+            data->frame_time_s  = static_cast<uint32_t>(dt_s.count());
+            data->frame_time_ns = static_cast<uint32_t>(dt_ns.count());
+
+            m_FrameQueue.push(*data);
+            
+
+            if ( m_cfg.fps && (m_cfg.fps == data->frame) )
+                this->StopScan();
+
+
 
             std::this_thread::sleep_until(frame_end);
             frame_start = frame_end;
 
-            if ( m_cfg.fps && (m_cfg.fps == data->frame) )
-                this->StopScan();
         }
 
         m_drift += 0.01f;
