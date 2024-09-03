@@ -51,6 +51,7 @@ private:
     std::unique_ptr<Console> m_Console = nullptr;
     std::unique_ptr<aero::networking::Server> m_TCP;
     std::unique_ptr<mps::Mps> m_MPS;
+    std::map<uint64_t, std::unique_ptr<mps::Mps>> m_Scanners;
 
     uint16_t m_Port = 0u;
     /*std::unique_ptr<aero::networking::Server> m_UDP;*/

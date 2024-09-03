@@ -89,7 +89,15 @@ void ServerLayer::OnConsoleInput(std::string_view msg)
 void ServerLayer::OnClientConnected(uint64_t id)
 {
     LOG_INFO_TAG("SERVER", "Connection esbablished with client id {}", id);
-    LOG_INFO_TAG("SERVER", "IsClientConnected = {}", m_TCP->IsClientConnected(id));
+
+    if (m_Scanners.find(id) != m_Scanners.end())
+    {
+        LOG_WARN_TAG("SERVER", "Already started a scanner from this connection!");
+    }
+
+    mps::ScannerCfg cfg;
+    m_Scanners[id] = std::make_h<mps::Mps>(cfg);
+    
 }
 
 void ServerLayer::OnClientDisconnected(uint64_t id)
