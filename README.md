@@ -13,11 +13,11 @@ cd mps-emulator
 ```
 2. Generate build files for the target compiler
 ```powershell
-scritps\setup.bat [ACTION]
+scritps/setup.bat [ACTION]
 ```
 e.g:
 ```powershell
-scritps\setup.bat vs2022
+scritps/setup.bat vs2022
 ```
 This will generate a vs2022 solution file in the root, and project files in each project directory (e.g., mps-server/mps-server.vcsproj). The build system is [`premake`](https://premake.github.io/), since I couldn't be bothered to learn CMake. To list the all supported compiler targets and premake actions run the `scritp/setup.bat` file with no arguments, or consult the premake [`documentation`](https://premake.github.io/docs/). The following should be all that is needed for this project. 
 
@@ -48,6 +48,7 @@ Open the Visual Studio solution file and build/run the desired configuration fro
 If msbuild is installed on your system and in your system path, run the msbuild batch file from the root directory. 
 ```powershell
 scritps\msbuild.bat [CONFIGURTION] [COMMAND]
+
 ```
 | CONFIGURATION            | DESCRIPTION                                                   |
 | ------------------------ | ------------------------------------------------------------- |
@@ -93,7 +94,7 @@ mps-server.exe [<OPTIONS>] [<ARGUMENTS>]
 
 e.g.:
 ```powershell
-mps-server.exe --port 1234 --disable-console
+mps-server.exe --disable-console --port 1234 
 ```
 Once running, connect to the server as any other scanner. If connecting from the same machine that is running the server, the ip will be 127.0.0.1 (i.e., localhost), otherwise use the LAN address of the machine (be sure to configure the firewall to allow TCP and UDP traffic on the specified port). 
 
