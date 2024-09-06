@@ -63,12 +63,12 @@ scritps\msbuild.bat [CONFIGURTION] [COMMAND]
 e.g.:
 
 ```powershell
-scritps\msbuild.bat clean
-scritps\msbuild.bat release run
+ scritps\msbuild.bat clean
+ scritps\msbuild.bat release run
 ```
 Intermediate and binary file can be removed by removing the .\bin\ and .\biuld\ directories, or by running
 ```powershell
-scripts\msbuild.bat clean
+ scripts\msbuild.bat clean
 ```
 This cleans both debug and release files. 
 ### Make (gmake \| gmake2)
@@ -79,13 +79,13 @@ For compliation on linux (not fully tested), or a windows development enviroment
 
 The project and solution files can be removed by running
 ```powershell
-scripts\setup.bat clean
+ scripts\setup.bat clean
 ```
 This will also remove compiled binaries. 
 
 ## USAGE
 ```powershell
-mps-server.exe [<OPTIONS>] [<ARGUMENTS>]
+ mps-server.exe [<OPTIONS>] [<ARGUMENTS>]
 ```
 | OPTIONS              | ARGUMENTS             | DESCRIPTION                                |
 | -------------------- | --------------------- | ------------------------------------------ |
@@ -94,7 +94,7 @@ mps-server.exe [<OPTIONS>] [<ARGUMENTS>]
 
 e.g.:
 ```powershell
-mps-server.exe --disable-console --port 1234 
+ mps-server.exe --disable-console --port 1234 
 ```
 Once running, connect to the server as any other scanner. If connecting from the same machine that is running the server, the ip will be 127.0.0.1 (i.e., localhost), otherwise use the LAN address of the machine (be sure to configure the firewall to allow TCP and UDP traffic on the specified port). 
 
