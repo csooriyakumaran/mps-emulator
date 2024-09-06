@@ -8,14 +8,17 @@ The emulator starts a TCP server on the default port 23 that accepts connections
 
 1. Clone the repository
 ```console
-$ git clone https://github.com/csooriyakumaran/mps-emulator.git
-$ cd mps-emulator
+git clone https://github.com/csooriyakumaran/mps-emulator.git
+cd mps-emulator
 ```
 2. Generate build files for the target compiler
 ```console
-$ scritps\setup.bat <ACTION>
+scritps\setup.bat <ACTION>
    --- e.g. ---
-$ scritps\setup.bat vs2022
+```
+[!EXAMPLE]
+```console
+scritps\setup.bat vs2022
 ```
 This will generate a vs2022 solution file in the root, and project files in each project directory (e.g., mps-server/mps-server.vcsproj). The build system is [`premake`](https://premake.github.io/), since I couldn't be bothered to learn CMake. To list the all supported compiler targets and premake actions run the `scritp/setup.bat` file with no arguments, or consult the premake [`documentation`](https://premake.github.io/docs/). The following should be all that is needed for this project. 
 
