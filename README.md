@@ -7,17 +7,16 @@ The emulator starts a TCP server on the default port 23 that accepts connections
 ## Generating project files
 
 1. Clone the repository
-```console
+```powershell
 git clone https://github.com/csooriyakumaran/mps-emulator.git
 cd mps-emulator
 ```
 2. Generate build files for the target compiler
-```console
-scritps\setup.bat <ACTION>
-   --- e.g. ---
+```powershell
+scritps\setup.bat [ACTION]
 ```
-[!EXAMPLE]
-```console
+e.g:
+```powershell
 scritps\setup.bat vs2022
 ```
 This will generate a vs2022 solution file in the root, and project files in each project directory (e.g., mps-server/mps-server.vcsproj). The build system is [`premake`](https://premake.github.io/), since I couldn't be bothered to learn CMake. To list the all supported compiler targets and premake actions run the `scritp/setup.bat` file with no arguments, or consult the premake [`documentation`](https://premake.github.io/docs/). The following should be all that is needed for this project. 
@@ -47,8 +46,8 @@ Open the Visual Studio solution file and build/run the desired configuration fro
 ### MSBuild (vs2022)
 
 If msbuild is installed on your system and in your system path, run the msbuild batch file from the root directory. 
-```console
-$ scritps\msbuild.bat [CONFIGURTION] [COMMAND]
+```powershell
+scritps\msbuild.bat [CONFIGURTION] [COMMAND]
 ```
 | CONFIGURATION            | DESCRIPTION                                                   |
 | ------------------------ | ------------------------------------------------------------- |
@@ -62,13 +61,13 @@ $ scritps\msbuild.bat [CONFIGURTION] [COMMAND]
 
 e.g.:
 
-```console
-$ scritps\msbuild.bat clean
-$ scritps\msbuild.bat release run
+```powershell
+scritps\msbuild.bat clean
+scritps\msbuild.bat release run
 ```
 Intermediate and binary file can be removed by removing the .\bin\ and .\biuld\ directories, or by running
-```console
-$ scripts\msbuild.bat clean
+```powershell
+scripts\msbuild.bat clean
 ```
 This cleans both debug and release files. 
 ### Make (gmake \| gmake2)
@@ -78,14 +77,14 @@ For compliation on linux (not fully tested), or a windows development enviroment
 ### Cleaning
 
 The project and solution files can be removed by running
-```console
-$ scripts\setup.bat clean
+```powershell
+scripts\setup.bat clean
 ```
 This will also remove compiled binaries. 
 
 ## USAGE
-```console
-$ mps-server.exe [<OPTIONS>] [<ARGUMENTS>]
+```powershell
+mps-server.exe [<OPTIONS>] [<ARGUMENTS>]
 ```
 | OPTIONS              | ARGUMENTS             | DESCRIPTION                                |
 | -------------------- | --------------------- | ------------------------------------------ |
@@ -93,8 +92,8 @@ $ mps-server.exe [<OPTIONS>] [<ARGUMENTS>]
 | `--disable-console`  |                       | disable the local input console.           |
 
 e.g.:
-```console
-$ mps-server.exe --port 1234 --disable-console
+```powershell
+mps-server.exe --port 1234 --disable-console
 ```
 Once running, connect to the server as any other scanner. If connecting from the same machine that is running the server, the ip will be 127.0.0.1 (i.e., localhost), otherwise use the LAN address of the machine (be sure to configure the firewall to allow TCP and UDP traffic on the specified port). 
 
