@@ -19,7 +19,7 @@ e.g:
 ```powershell
 scritps/setup.bat vs2022
 ```
-This will generate a vs2022 solution file in the root, and project files in each project directory (e.g., mps-server/mps-server.vcsproj). The build system is [`premake`](https://premake.github.io/), since I couldn't be bothered to learn CMake. To list the all supported compiler targets and premake actions run the `scritp/setup.bat` file with no arguments, or consult the premake [`documentation`](https://premake.github.io/docs/). The following should be all that is needed for this project. 
+This will generate a vs2022 solution file in the root, and project files in each project directory (e.g., mps-server/mps-server.vcsproj). The build system is [`premake`](https://premake.github.io/), since I couldn't be bothered to learn CMake. The premake binary is included in `./build-tools/premake/` along with the license. To list the all supported compiler targets and premake actions run the `scritp/setup.bat` file with no arguments, or consult the premake [`documentation`](https://premake.github.io/docs/). The following should be all that is needed for this project. 
 
 | ACTION                   |  DESCRIPTION                                                      |
 | ------------------------ | ----------------------------------------------------------------- |
@@ -112,7 +112,7 @@ Commands can be sent to the server from clients or the console (if prefixed by `
 
 e.g.:
 ```console
-"SET RATE 850 10\r\n"
+> "SET RATE 850 10\r\n"
 ```
 will send the command `SET RATE` with the arguments `850` and `10`
 
