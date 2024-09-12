@@ -80,6 +80,8 @@ private:
     bool m_Scanning      = false;
     bool m_Calibrating   = false;
 
+    uint64_t m_ClientId;
+
     uint32_t m_naverages = 1;
     float m_drift        = 0.0f;
 

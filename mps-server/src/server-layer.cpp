@@ -45,7 +45,7 @@ void ServerLayer::OnAttach()
     /*m_UDP            = std::make_unique<aero::networking::Server>(udp_info);*/
     /*m_UDP->Start();*/
     mps::ScannerCfg cfg;
-    m_MPS = std::make_unique<mps::Mps>(cfg);
+    m_MPS = std::make_unique<mps::Mps>(cfg, 0);
     m_MPS->Start();
 }
 
@@ -96,8 +96,8 @@ void ServerLayer::OnClientConnected(uint64_t id)
     }
 
     mps::ScannerCfg cfg;
-    m_Scanners[id] = std::make_h<mps::Mps>(cfg);
-    
+    m_Scanners[id] = std::make_unique<mps::Mps>(cfg, id);
+    m_Scanners[id]->Start(); 
 }
 
 void ServerLayer::OnClientDisconnected(uint64_t id)

@@ -10,8 +10,8 @@
 #include "scanivalve/mps-data.h"
 #include "utils/string-utils.h"
 
-mps::Mps::Mps(const mps::ScannerCfg& cfg)
-    : m_cfg(cfg), m_ThreadPool(2)
+mps::Mps::Mps(const mps::ScannerCfg& cfg, uint64_t id)
+    : m_cfg(cfg), m_ThreadPool(2), m_ClientID(id)
 {
 }
 
@@ -21,8 +21,8 @@ void mps::Mps::Start()
 {
     m_Running        = true;
     m_ScanningThread = std::jthread([this]() { this->ScanThreadFn(); });
-    m_ThreadPool.Enqueu( [this]() { this->ScanThreadFn(); }, "Scanning Thread");
-    m_ThreadPool.Enqueu( [this]() { this->TransferThreadFn(); "Transfer Thread"});
+    m_ThreadPool.Enqueue( [this]() { this->ScanThreadFn(); }, "Scanning Thread");
+    m_ThreadPool.Enqueue( [this]() { this->TransferThreadFn(); }, "Transfer Thread");
 }
 
 
@@ -84,14 +84,23 @@ void mps::Mps::StopScan()
     m_Scanning = false;
     m_Status   = mps::Status::READY;
 
-    
-    m_FrameQueue.clear();
+    while (!m_FrameQueue.empty())
+        m_FrameQueue.pop();
+
 }
 
-void mps::Mps::TransferThreadFn(std::shared_ptr<aero::Server> svr )
+void mps::Mps::TransferThreadFn(std::shared_ptr<aero::networking::Server> svr )
 {
-
+    while (m_Running)
+    {
+        while (!m_FrameQueue.empty())
+        {
+            svr->SendBuffer(uint64_t id, Buffer buff);
+        }
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    }
 }
+
 void mps::Mps::ScanThreadFn()
 {
     while (m_Running)
