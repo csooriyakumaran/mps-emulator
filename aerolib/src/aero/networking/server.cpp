@@ -16,7 +16,7 @@ Server::~Server() { Stop(); }
 void Server::Start()
 {
 
-    LOG_INFO_TAG( m_ServerInfo.name, "Starting server on port {}", m_ServerInfo.port);
+    LOG_INFO_TAG(m_ServerInfo.name, "Starting server on port {}", m_ServerInfo.port);
 
     if (!InitializeNetworking())
     {
@@ -52,7 +52,9 @@ void Server::Start()
     //- create UDP Socket
     if (!CreateSocket(m_StreamSocket, SocketType::UDP, m_ServerInfo.port))
     {
-        LOG_ERROR_TAG(m_ServerInfo.name, "Could not create stream Socket. Aborting server startup.");
+        LOG_ERROR_TAG(
+            m_ServerInfo.name, "Could not create stream Socket. Aborting server startup."
+        );
 
         CleanupNetworking();
         return;
@@ -62,7 +64,7 @@ void Server::Start()
 
 void Server::Stop()
 {
-    LOG_INFO_TAG( m_ServerInfo.name, "Stopping TCP server. closing port {}", m_ServerInfo.port);
+    LOG_INFO_TAG(m_ServerInfo.name, "Stopping TCP server. closing port {}", m_ServerInfo.port);
 
     m_ServerIsRunning = false;
 
@@ -146,47 +148,47 @@ void Server::HandleConnectionThreadFn(uint64_t id)
 
     buf.Release();
     KickClient(id);
-
 }
 
 void Server::DataStreamThreadFn()
 {
     LOG_INFO_TAG(m_ServerInfo.name, "Starting UDP thread function, waiting for data to send");
-    while ( m_ServerIsRunning )
+    while (m_ServerIsRunning)
     {
-        while ( !m_DataQueue.empty())
+        while (!m_DataQueue.empty())
         {
             DataPacket packet = m_DataQueue.front();
             m_DataQueue.pop();
 
+            if (packet.id == 0)
+            {
+                LOG_WARN_TAG(m_ServerInfo.name, "Cannot stream data from the console since it has no knowlege of the clients");
+                continue;
+            }
+
             // if the target cleint has disconnected we want to disregard this packet
             if (m_Connections.find(packet.id) == m_Connections.end())
             {
-                LOG_ERROR_TAG(m_ServerInfo.name, "No registered client with id {}", packet.id);
+                LOG_ERROR_TAG(m_ServerInfo.name, "Cannot stream data: No registered client with id {}", packet.id);
                 continue;
             }
 
             ClientInfo& client = m_Connections[packet.id];
             struct sockaddr_in client_addr;
-            client_addr.sin_family = AF_INET;
-            client_addr.sin_port = htons(packet.port);
+            client_addr.sin_family      = AF_INET;
+            client_addr.sin_port        = htons(packet.port);
             client_addr.sin_addr.s_addr = inet_addr(client.ip.c_str());
 
             LOG_DEBUG_TAG(m_ServerInfo.name, "Streaming data to {}:{}", client.ip, packet.port);
-            
+
             sendto(
-                m_StreamSocket.socket,
-                (char*)packet.buf.data,
-                (int)packet.buf.size,
-                0,
-                (struct sockaddr*)&client_addr, 
-                sizeof(client_addr)
+                m_StreamSocket.socket, (char*)packet.buf.data, (int)packet.buf.size, 0,
+                (struct sockaddr*)&client_addr, sizeof(client_addr)
             );
         }
 
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
-
 }
 
 void Server::KickClient(uint64_t id)
@@ -201,12 +203,24 @@ void Server::KickClient(uint64_t id)
 
 void Server::SendBuffer(uint64_t id, Buffer buf)
 {
+    if (id == 0)
+    {
+        LOG_WARN_TAG(m_ServerInfo.name, "Sending data to all clients");
+
+        for (auto& [id, client] : m_Connections)
+            send((SOCKET)client.id, (char*)buf.data, (int)buf.size, 0);
+
+        return;
+    }
+
     if (m_Connections.find(id) == m_Connections.end())
         return LOG_ERROR_TAG(m_ServerInfo.name, "No registered client with id {}", id);
 
     auto& client = m_Connections[id];
 
     send((SOCKET)client.id, (char*)buf.data, (int)buf.size, 0);
+
+    return;
 }
 
 void Server::SendBufferToAll(Buffer buf)
@@ -227,10 +241,10 @@ void Server::SendStringToAll(const std::string& str)
 
 bool Server::IsClientConnected(uint64_t id) const
 {
-   return !(m_Connections.find(id) == m_Connections.end());
+    return !(m_Connections.find(id) == m_Connections.end());
 }
 
-void Server::StreamData(uint64_t id, uint16_t port,  Buffer buf)
+void Server::StreamData(uint64_t id, uint16_t port, Buffer buf)
 {
     m_DataQueue.push({id, port, Buffer::Copy(buf)});
 }

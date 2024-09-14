@@ -16,11 +16,6 @@ ServerLayer::~ServerLayer() {}
 
 void ServerLayer::OnAttach()
 {
-    if (m_EnableConsole)
-    {
-        m_Console = std::make_unique<Console>();
-        m_Console->SetMessageCallback([this](std::string_view msg) { this->OnConsoleInput(msg); });
-    }
 
     //-set up the TCP server
     aero::networking::ServerInfo server_info;
@@ -35,6 +30,15 @@ void ServerLayer::OnAttach()
     m_Server->SetClientDisconCallback([this](uint64_t id) { this->OnClientDisconnected(id); });
     m_Server->SetDataRecvCallback([this](uint64_t id, const aero::Buffer buf) { this->OnDataReceived(id, buf); });
     m_Server->Start();
+
+    if (m_EnableConsole)
+    {
+        m_Console = std::make_unique<Console>();
+        m_Console->SetMessageCallback([this](std::string_view msg) { this->OnConsoleInput(msg); });
+        mps::ScannerCfg cfg;
+        m_Scanners[0] = std::make_unique<mps::Mps>(cfg, 0, m_Server);
+        m_Scanners[0]->Start();
+    }
 }
 
 void ServerLayer::OnDetach()
@@ -183,8 +187,12 @@ void ServerLayer::OnCommand(uint64_t id, std::string_view cmd)
         return aero::Application::Get().Restart();
     }
 
-    std::string response = m_Scanners[id]->ParseCommands(tokens[0]);
-    m_Server->SendString(id, response);
+
+    if (m_Scanners.find(id) != m_Scanners.end())
+    {
+        std::string response = m_Scanners[id]->ParseCommands(tokens[0]);
+        m_Server->SendString(id, response);
+    }
 
     // LOG_ERROR_TAG("APP", "Inalid Command: `{}`", tokens[0]);
     // m_TCP->SendString(id, std::string("Invalid Command: ") + std::string(tokens[0]) + "\r\n>");
