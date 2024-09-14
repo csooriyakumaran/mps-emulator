@@ -28,7 +28,7 @@ void ServerLayer::OnAttach()
     m_Server = std::make_shared<aero::networking::Server>(server_info);
     m_Server->SetClientConCallback([this](uint64_t id) { this->OnClientConnected(id); });
     m_Server->SetClientDisconCallback([this](uint64_t id) { this->OnClientDisconnected(id); });
-    m_Server->SetDataRecvCallback([this](uint64_t id, const aero::Buffer buf) { this->OnDataReceived(id, buf); });
+    m_Server->SetDataRecvCallback([this](uint64_t id, aero::Buffer buf) { this->OnDataReceived(id, buf); });
     m_Server->Start();
 
     if (m_EnableConsole)
@@ -103,17 +103,18 @@ void ServerLayer::OnClientDisconnected(uint64_t id)
     m_Scanners.erase(id);
 }
 
-void ServerLayer::OnDataReceived(uint64_t id, const aero::Buffer buf)
+void ServerLayer::OnDataReceived(uint64_t id, aero::Buffer buf)
 {
 
     std::string_view cmd(buf.As<char>(), buf.size);
-
+    /*std::string_view cmd((char *)buf.data, buf.size);*/
     LOG_DEBUG_TAG("APP", "Data revieced from client `{}`", cmd);
 
     // validate input
 
     //- handle command
     OnCommand(id, cmd);
+    buf.Release();
 }
 
 // ----  T C P - S E R V E R --------------------------------------------------

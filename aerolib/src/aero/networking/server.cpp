@@ -152,24 +152,40 @@ void Server::HandleConnectionThreadFn(uint64_t id)
 
 void Server::DataStreamThreadFn()
 {
+
+    std::function<bool(void)> is_not_empty = [this]()
+    {
+        this->m_StreamLock.lock();
+        bool is_not_empty = !this->m_DataQueue.empty();
+        this->m_StreamLock.unlock();
+        return is_not_empty;
+    };
     LOG_INFO_TAG(m_ServerInfo.name, "Starting UDP thread function, waiting for data to send");
     while (m_ServerIsRunning)
     {
-        while (!m_DataQueue.empty())
+        while (is_not_empty())
         {
             DataPacket packet = m_DataQueue.front();
             m_DataQueue.pop();
 
             if (packet.id == 0)
             {
-                LOG_WARN_TAG(m_ServerInfo.name, "Cannot stream data from the console since it has no knowlege of the clients");
+                LOG_WARN_TAG(
+                    m_ServerInfo.name,
+                    "Cannot stream data from the console since it has no knowlege of the clients"
+                );
+                packet.data.Release();
                 continue;
             }
 
             // if the target cleint has disconnected we want to disregard this packet
             if (m_Connections.find(packet.id) == m_Connections.end())
             {
-                LOG_ERROR_TAG(m_ServerInfo.name, "Cannot stream data: No registered client with id {}", packet.id);
+                LOG_ERROR_TAG(
+                    m_ServerInfo.name, "Cannot stream data: No registered client with id {}",
+                    packet.id
+                );
+                packet.data.Release();
                 continue;
             }
 
@@ -182,9 +198,11 @@ void Server::DataStreamThreadFn()
             LOG_DEBUG_TAG(m_ServerInfo.name, "Streaming data to {}:{}", client.ip, packet.port);
 
             sendto(
-                m_StreamSocket.socket, (char*)packet.buf.data, (int)packet.buf.size, 0,
+                m_StreamSocket.socket, (char*)packet.data.data, (int)packet.data.size, 0,
                 (struct sockaddr*)&client_addr, sizeof(client_addr)
             );
+
+            packet.data.Release();
         }
 
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
@@ -205,21 +223,21 @@ void Server::SendBuffer(uint64_t id, Buffer buf)
 {
     if (id == 0)
     {
-        LOG_WARN_TAG(m_ServerInfo.name, "Sending data to all clients");
-
-        for (auto& [id, client] : m_Connections)
-            send((SOCKET)client.id, (char*)buf.data, (int)buf.size, 0);
-
-        return;
+        return SendBufferToAll(buf);
     }
 
     if (m_Connections.find(id) == m_Connections.end())
-        return LOG_ERROR_TAG(m_ServerInfo.name, "No registered client with id {}", id);
+    {
+        LOG_ERROR_TAG(m_ServerInfo.name, "No registered client with id {}", id);
+        // buf.Release();
+        return;
+    }
 
     auto& client = m_Connections[id];
 
     send((SOCKET)client.id, (char*)buf.data, (int)buf.size, 0);
 
+    // buf.Release();
     return;
 }
 
@@ -227,6 +245,8 @@ void Server::SendBufferToAll(Buffer buf)
 {
     for (auto& [id, client] : m_Connections)
         send((SOCKET)client.id, (char*)buf.data, (int)buf.size, 0);
+
+    buf.Release();
 }
 
 void Server::SendString(uint64_t id, const std::string& str)
@@ -246,7 +266,10 @@ bool Server::IsClientConnected(uint64_t id) const
 
 void Server::StreamData(uint64_t id, uint16_t port, Buffer buf)
 {
-    m_DataQueue.push({id, port, Buffer::Copy(buf)});
+    m_StreamLock.lock();
+    m_DataQueue.push({id, port, aero::Buffer::Copy(buf.data, buf.size)});
+    m_StreamLock.unlock();
+    buf.Release();
 }
 
 } // namespace aero::networking

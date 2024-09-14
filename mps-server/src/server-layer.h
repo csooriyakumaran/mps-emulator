@@ -32,7 +32,7 @@ private:
     // ---- S E R V E R - C A L L B A C K S -----------------------------------
     void OnClientConnected(uint64_t id);
     void OnClientDisconnected(uint64_t id);
-    void OnDataReceived(uint64_t id, const aero::Buffer buf);
+    void OnDataReceived(uint64_t id, aero::Buffer buf);
 
     // ----  T C P - S E R V E R ----------------------------------------------
     void SendMsg(std::string_view msg);

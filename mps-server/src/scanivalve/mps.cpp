@@ -25,7 +25,6 @@ mps::Mps::~Mps() { Shutdown(); }
 void mps::Mps::Start()
 {
     m_Running = true;
-    /*m_ScanningThread = std::jthread([this]() { this->ScanThreadFn(); });*/
     m_ThreadPool.Enqueue([this]() { this->ScanThreadFn(); }, "Scanning Thread");
 }
 
@@ -34,9 +33,7 @@ void mps::Mps::Shutdown()
 
     StopScan();
     m_Running = false;
-
-    /*if (m_ScanningThread.joinable())*/
-    /*    m_ScanningThread.join();*/
+    m_Data.Release();
 }
 
 void mps::Mps::CalZ()
@@ -164,7 +161,7 @@ void mps::Mps::ScanThreadFn()
             std::memcpy(&data->temperature, &t, 8 * sizeof(float));
 
             if (m_cfg.enudp)
-                m_Server->StreamData(m_ClientID, m_cfg.udp_port, aero::Buffer(data, sizeof(mps::BinaryPacket)));
+                m_Server->StreamData(m_ClientID, m_cfg.udp_port, aero::Buffer::Copy(data, sizeof(mps::BinaryPacket)));
             //- TODO(Chris): implement other data transfer options
 
             if ( m_cfg.fps && (m_cfg.fps == data->frame) )

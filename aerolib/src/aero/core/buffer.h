@@ -48,7 +48,9 @@ struct Buffer
 
     void Allocate(uint64_t _size)
     {
-        delete[] (uint8_t*)data;
+        if (data)
+            delete[] (uint8_t*)data;
+        
         data = nullptr;
 
         if (_size == 0)
@@ -60,7 +62,8 @@ struct Buffer
 
     void Release()
     {
-        delete[] (uint8_t*)data;
+        if (data)
+            delete[] (uint8_t*)data;
         data = nullptr;
         size = 0;
     }

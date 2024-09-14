@@ -19,6 +19,7 @@
 #include <map>
 #include <stdint.h>
 #include <string>
+#include <mutex>
 
 #include "aero/core/buffer.h"
 #include "aero/core/threads.h"
@@ -46,7 +47,7 @@ struct DataPacket
 {
     uint64_t id;
     uint16_t port;
-    aero::Buffer buf;
+    aero::Buffer data;
 };
 
 class Server
@@ -113,6 +114,7 @@ private:
     ClientDisconnectFn m_ClientDisconnectCallback;
 
     ThreadPool m_Threads;
+    std::mutex m_StreamLock;
 };
 
 } // namespace aero::networking
