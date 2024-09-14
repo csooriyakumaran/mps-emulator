@@ -102,7 +102,7 @@ Once running, connect to the server as any other scanner. If connecting from the
 
 If not disabled, a local console runs on a separate listening thread that waits for user input through stdin. The user can send TCP messages to all clients simply by typing them in the console and hitting enter. 
 
-For testing, scanner commands can be issued direclty from the server console by prefixing the normal MPS commands with a `/` (e.g. `/scan`), although in the debug configuration build, the number of logging statements that are printed makes this somewhat annoying. Commands issued via the console will have their output echoed to all connected clients. Scan requests made from the console will result in data being streamed to all listening clients.
+For testing, scanner commands can be issued direclty from the server console by prefixing the normal MPS commands with a `/` (e.g. `/set fps 300`), although in the debug configuration build, the number of logging statements that are printed makes this somewhat annoying. Commands issued via the console will have their output echoed to all connected clients. Scan requests made from the console will result in data being streamed to all listening clients.
 
 Because the console waits for user input, it will hang on reboot/shutdown until user input is written to stdin. Consequently, when not testing with the console it is better to use the `--disable-console` flag so that the server can be remotely restarted with the `reboot` or `restart` command, or stopped with the `shutdown` command. 
 
@@ -170,7 +170,7 @@ Consult the MPS manual for more detailed descriptions of each command, including
 
 - [ ] Sending data over TCP
 - [ ] Saving / loading configurations from files
-
+- [ ] Implement the same logic employed by Scanivale to calculate the scan and output rate based on the values set by `SET RATE`
 
 
 

@@ -35,7 +35,7 @@ static std::string StatusStr[(size_t)Status::_COUNT] = {"READY", "SCAN", "CALZ",
 struct ScannerCfg
 {
     int32_t fps           = 0;
-    float framerate       = 10;
+    float framerate       = 850;
     float out_rate        = 10;
     int32_t unit_index    = 23;
     int32_t serial_number = 23;
