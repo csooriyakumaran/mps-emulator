@@ -2,7 +2,6 @@
 
 #include <chrono>
 #include <cstring>
-#include <iostream>
 #include <sstream>
 
 #include "aero/core/log.h"
@@ -10,8 +9,14 @@
 #include "scanivalve/mps-data.h"
 #include "utils/string-utils.h"
 
-mps::Mps::Mps(const mps::ScannerCfg& cfg, uint64_t id)
-    : m_cfg(cfg), m_ThreadPool(2), m_ClientID(id)
+mps::Mps::Mps(
+    const mps::ScannerCfg& cfg, uint64_t id, std::shared_ptr<aero::networking::Server> svr
+)
+    : m_cfg(cfg),
+      m_ThreadPool(2),
+      m_ClientID(id),
+      m_Name(std::format("MPS-{}", id)),
+      m_Server(svr)
 {
 }
 
@@ -19,12 +24,10 @@ mps::Mps::~Mps() { Shutdown(); }
 
 void mps::Mps::Start()
 {
-    m_Running        = true;
-    m_ScanningThread = std::jthread([this]() { this->ScanThreadFn(); });
-    m_ThreadPool.Enqueue( [this]() { this->ScanThreadFn(); }, "Scanning Thread");
-    m_ThreadPool.Enqueue( [this]() { this->TransferThreadFn(); }, "Transfer Thread");
+    m_Running = true;
+    /*m_ScanningThread = std::jthread([this]() { this->ScanThreadFn(); });*/
+    m_ThreadPool.Enqueue([this]() { this->ScanThreadFn(); }, "Scanning Thread");
 }
-
 
 void mps::Mps::Shutdown()
 {
@@ -32,21 +35,21 @@ void mps::Mps::Shutdown()
     StopScan();
     m_Running = false;
 
-    if (m_ScanningThread.joinable())
-        m_ScanningThread.join();
+    /*if (m_ScanningThread.joinable())*/
+    /*    m_ScanningThread.join();*/
 }
 
 void mps::Mps::CalZ()
 {
     m_Calibrating = true;
-    m_Status = mps::Status::CALZ;
+    m_Status      = mps::Status::CALZ;
 }
 
 void mps::Mps::StartScan()
 {
     std::random_device rd{};
     std::mt19937 gen{rd()};
-    m_NormalDistribution = std::normal_distribution<float>(m_drift, 0.35f);
+    m_NormalDistribution = std::normal_distribution<float>(0.0f, 5.07e-5f);
 
     //- get start time and conver to seconds/nanosecons
 
@@ -76,7 +79,7 @@ void mps::Mps::StartScan()
     m_naverages                  = (int)(m_cfg.framerate / m_cfg.out_rate);
     m_Scanning                   = true;
     m_Status                     = mps::Status::SCAN;
-    // LOG_INFO_TAG("MPS", "Scan started at {}", tp);
+    // LOG_INFO_TAG(m_Name, "Scan started at {}", tp);
 }
 
 void mps::Mps::StopScan()
@@ -86,19 +89,6 @@ void mps::Mps::StopScan()
 
     while (!m_FrameQueue.empty())
         m_FrameQueue.pop();
-
-}
-
-void mps::Mps::TransferThreadFn(std::shared_ptr<aero::networking::Server> svr )
-{
-    while (m_Running)
-    {
-        while (!m_FrameQueue.empty())
-        {
-            svr->SendBuffer(uint64_t id, Buffer buff);
-        }
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
-    }
 }
 
 void mps::Mps::ScanThreadFn()
@@ -108,9 +98,8 @@ void mps::Mps::ScanThreadFn()
         if (m_Calibrating)
         {
             std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-            m_drift = 0;
             m_Calibrating = false;
-            m_Status = mps::Status::READY;
+            m_Status      = mps::Status::READY;
         }
 
         auto frame_start = m_StartScanTime;
@@ -123,11 +112,11 @@ void mps::Mps::ScanThreadFn()
             auto dt_ns     = dt - dt_s;
 
             LOG_DEBUG_TAG(
-                "MPS", "Frame start time: {:.8f} s ({} Hz)", dt_s.count() + dt_ns.count() / 1e9,
+                m_Name, "Frame start time: {:.8f} s ({} Hz)", dt_s.count() + dt_ns.count() / 1e9,
                 m_cfg.out_rate
             );
             float p[64];
-            memset(p, 0, 64 * sizeof(float));
+            std::memset(p, 0, 64 * sizeof(float));
 
             auto subframe_start = frame_start;
             for (size_t i = 0; i < (size_t)m_naverages; ++i)
@@ -142,7 +131,7 @@ void mps::Mps::ScanThreadFn()
                 auto sdt_s  = std::chrono::duration_cast<std::chrono::seconds>(sdt);
                 auto sdt_ns = sdt - sdt_s;
                 LOG_DEBUG_TAG(
-                    "MPS", "SubFrame {:04d}: {:.8f} s ({} Hz) P[0] = {:.4f}", i,
+                    m_Name, "SubFrame {:04d}: {:.8f} s ({} Hz) P[0] = {:.4f}", i,
                     sdt_s.count() + sdt_ns.count() / 1e9, m_cfg.framerate, p[0]
                 );
 
@@ -150,27 +139,39 @@ void mps::Mps::ScanThreadFn()
                 subframe_start = subframe_end;
             }
 
+            float t[8];
+            std::memset(t, 0, 8 * sizeof(float));
+            for (size_t i = 0; i < 8; ++i)
+                t[i] = 32.0f;
+
+
             auto end_dt    = frame_end - m_StartScanTime;
             auto end_dt_s  = std::chrono::duration_cast<std::chrono::seconds>(end_dt);
             auto end_dt_ns = end_dt - end_dt_s;
 
             LOG_DEBUG_TAG(
-                "MPS", "Frame end time: {:.8f} s ({} Hz) p[0] = {} Pa",
+                m_Name, "Frame end time: {:.8f} s ({} Hz) p[0] = {} Pa",
                 end_dt_s.count() + end_dt_ns.count() / 1e9, m_cfg.out_rate, p[0]
             );
 
             mps::BinaryPacket* data = m_Data.As<mps::BinaryPacket>();
             data->frame += 1;
 
-            std::memcpy(&p, &data->pressure, 64 * sizeof(float));
+            std::memcpy(&data->pressure, &p, 64 * sizeof(float));
             data->frame_time_s  = static_cast<uint32_t>(dt_s.count());
             data->frame_time_ns = static_cast<uint32_t>(dt_ns.count());
 
-            m_FrameQueue.push(*data);
-            
+            std::memcpy(&data->temperature, &t, 8 * sizeof(float));
+
+            if (m_cfg.enudp)
+                m_Server->StreamData(m_ClientID, m_cfg.udp_port, aero::Buffer(data, sizeof(mps::BinaryPacket)));
+            //- TODO(Chris): implement other data transfer options
 
             if ( m_cfg.fps && (m_cfg.fps == data->frame) )
+            {
                 this->StopScan();
+                m_Server->SendString(m_ClientID, "\r\n>");
+            }
 
 
 
@@ -179,15 +180,13 @@ void mps::Mps::ScanThreadFn()
 
         }
 
-        m_drift += 0.01f;
-
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }
 }
 
 float mps::Mps::Sample()
 {
-    return [this]() { return this->m_NormalDistribution(this->m_RandomGenerator); }();
+    return [this]() { return this->m_NormalDistribution(this->m_RandomGenerator) * ScanUnitConversion[m_cfg.unit_index]; }();
 }
 
 /*
@@ -198,7 +197,7 @@ passing to this function.
 This function will then further divide each command into tokens and parse them
 according the the requested action.
 
-
+p
 */
 std::string mps::Mps::ParseCommands(std::string cmd)
 {
@@ -221,7 +220,7 @@ std::string mps::Mps::ParseCommands(std::string cmd)
     if (tokens[0] == "SCAN" || tokens[0] == "scan")
     {
         this->StartScan();
-        return "Scan started\r\n";
+        return "Scan started";
     }
 
     if (tokens[0] == "STOP" || tokens[0] == "stop" || tokens[0][0] == 0x1b) // <ESC>
@@ -229,6 +228,8 @@ std::string mps::Mps::ParseCommands(std::string cmd)
         this->StopScan();
         return "\r\n>";
     }
+
+    // ----- S E T ----------------------------------------------------------------------
 
     if (tokens[0] == "SET" || tokens[0] == "set")
     {
@@ -240,7 +241,7 @@ std::string mps::Mps::ParseCommands(std::string cmd)
             // [0] [1]   [2]    [3]
             // SET RATE <RATE> [<OUT RATE>]
             if (tokens.size() < 3)
-                return "Invalid Command: `SET RATE` requires at least 1 arguments\r\n>";
+                return "Invalid Command: `SET RATE` requires at least 1 arguments: SET RATE <rate> [<output rate>]\r\n>";
 
             if (tokens.size() >= 3)
                 std::sscanf(tokens[2].c_str(), "%f", &m_cfg.framerate);
@@ -248,7 +249,7 @@ std::string mps::Mps::ParseCommands(std::string cmd)
             if (tokens.size() >= 4)
                 std::sscanf(tokens[3].c_str(), "%f", &m_cfg.out_rate);
 
-            LOG_INFO_TAG("MPS", "Frame Rate: {}, Out Rate: {}", m_cfg.framerate, m_cfg.out_rate);
+            LOG_INFO_TAG(m_Name, "Frame Rate: {}, Out Rate: {}", m_cfg.framerate, m_cfg.out_rate);
 
             return cmd + "\r\n>";
         }
@@ -257,15 +258,41 @@ std::string mps::Mps::ParseCommands(std::string cmd)
         {
 
             // [0] [1]   [2]
-            // SET FPS <fps> 
+            // SET FPS <fps>
             if (tokens.size() < 3)
-                return "Invalid Command: `SET FPS` requires 1 argument\r\n>";
+                return "Invalid Command: `SET FPS` requires 1 argument: SET FPS <fps>\r\n>";
 
             std::sscanf(tokens[2].c_str(), "%d", &m_cfg.fps);
-            LOG_INFO_TAG("MPS", "Frames Per Scan: {}", m_cfg.fps);
+            LOG_INFO_TAG(m_Name, "Frames Per Scan: {}", m_cfg.fps);
+            return cmd + "\r\n>";
+        }
+
+        if (tokens[1] == "ENUDP" || tokens[1] == "enudp")
+        {
+
+            if (tokens.size() < 3)
+                return "Invalid Command: `SET ENUDP` requires 1 argument: SET ENUDP <0 or 1>\r\n>";
+
+            int enudp;
+            std::sscanf(tokens[2].c_str(), "%d", &enudp);
+            m_cfg.enudp = (bool)enudp;
+
+            LOG_INFO_TAG(m_Name, "UDP enabled = {}", m_cfg.enudp);
+            return cmd + "\r\n>";
+        }
+
+        if (tokens[1] == "IPUDP" || tokens[1] == "ipudp")
+        {
+            if (tokens.size() < 4)
+                return "Invalid Command: `SET IPUDP` requires 3 argument: SET IPUDP <ip> <port>\r\n>";
+
+            //- TODO(Chris): implement target udp ip address. currently it is automatically taken from the client sending the scan command
+            std::sscanf(tokens[3].c_str(), "%hd", &m_cfg.udp_port);
             return cmd + "\r\n>";
         }
     }
+
+    // ----- L I S T --------------------------------------------------------------------
 
     if (tokens[0] == "LIST" || tokens[0] == "list")
     {
@@ -274,12 +301,32 @@ std::string mps::Mps::ParseCommands(std::string cmd)
 
         if (tokens[1] == "S" || tokens[1] == "s")
         {
-            // build a string stream response. TBD
+            //- TODO(Chris): these should just read the cfg files and return the commands stored there.
+            // build a string stream response. 
+            std::stringstream out;
+            out << "SET RATE " << m_cfg.framerate << " " << m_cfg.out_rate << "\r\n";
+            out << "SET FPS " << m_cfg.fps << "\r\n";
+            out << "SET UNITS " << ScanUnitsNames[m_cfg.unit_index] << " " << ScanUnitConversion[m_cfg.unit_index] << "\r\n";
+            out << "SET FORMAT T F, F B, B B\r\n"; //- TODO(Chris): implement
+            out << "SET TRIG 0 \r\n"; //- TODO(Chris): implement 
+            out << "SET ENFTP 0 \r\n"; //- TODO(Chris): implement 
+            out << "SET OPTIONS 0 0 16 \r\n"; //- TODO(Chris): implement 
+            out << ">";
 
-            return cmd + "\r\n>";
+            return out.str();
+        }
+        if (tokens[1] == "UDP" || tokens[1] == "udp")
+        {
+            // build a string stream response. TBD
+            std::stringstream out;
+            out << "SET ENUDP " << (int)m_cfg.enudp << "\r\n";
+            out << "SET IPUDP " << m_cfg.udp_ip << " " << m_cfg.udp_port << "\r\n";
+            out << ">";
+
+            return out.str();
         }
     }
 
-    LOG_ERROR_TAG("MPS", "Inalid Command: `{}`", tokens[0]);
+    LOG_ERROR_TAG(m_Name, "Inalid Command: `{}`", tokens[0]);
     return "Invalid Command: `" + cmd + "`\r\n>";
 }

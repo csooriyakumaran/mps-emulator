@@ -2,16 +2,15 @@
 #define __SCANIVALVE_MPS_H_
 
 #include <chrono>
+#include <queue>
 #include <random>
 #include <stdint.h>
 #include <string>
 #include <thread>
-#include <vector>
-#include <queue>
 
 #include "aero/core/buffer.h"
-#include "aero/networking/server.h"
 #include "aero/core/threads.h"
+#include "aero/networking/server.h"
 
 #include "mps-data.h"
 
@@ -40,12 +39,15 @@ struct ScannerCfg
     float out_rate        = 10;
     int32_t unit_index    = 23;
     int32_t serial_number = 23;
+    bool enudp = true;
+    uint16_t udp_port     = 24;
+    std::string udp_ip    = "127.0.0.1";
 };
 
 class Mps
 {
 public:
-    Mps(const ScannerCfg& cfg);
+    Mps(const ScannerCfg& cfg, uint64_t id, std::shared_ptr<aero::networking::Server> svr);
     ~Mps();
 
     void Start();
@@ -62,28 +64,27 @@ public:
 
 private:
     void ScanThreadFn();
-    void TransferThreadFn();
     uint8_t NumAverages();
     float Sample();
 
 private:
+    std::string m_Name;
     aero::Buffer m_Data;
     std::queue<mps::BinaryPacket> m_FrameQueue;
     std::jthread m_ScanningThread;
-    
+
     aero::ThreadPool m_ThreadPool;
 
     ScannerCfg m_cfg;
-    Status m_Status      = Status::READY;
+    Status m_Status    = Status::READY;
 
-    bool m_Running       = false;
-    bool m_Scanning      = false;
-    bool m_Calibrating   = false;
+    bool m_Running     = false;
+    bool m_Scanning    = false;
+    bool m_Calibrating = false;
 
-    uint64_t m_ClientId;
+    uint64_t m_ClientID;
 
     uint32_t m_naverages = 1;
-    float m_drift        = 0.0f;
 
     std::mt19937 m_RandomGenerator;
     std::normal_distribution<float> m_NormalDistribution;
@@ -91,6 +92,8 @@ private:
     std::chrono::time_point<std::chrono::steady_clock> m_StartScanTime;
     uint32_t m_StartScanTimeS;
     uint32_t m_StartScanTimeNS;
+
+    std::shared_ptr<aero::networking::Server> m_Server;
 };
 
 } // namespace mps

@@ -39,8 +39,14 @@ struct ServerInfo
     std::string name     = "Server";
     size_t workers       = 1;
     uint16_t port        = 0u;
-    SocketType type      = SocketType::TCP;
     uint32_t buffer_size = 4096;
+};
+
+struct DataPacket
+{
+    uint64_t id;
+    uint16_t port;
+    aero::Buffer buf;
 };
 
 class Server
@@ -81,6 +87,7 @@ public:
         SendBufferToAll(Buffer(&data, sizeof(T)));
     }
 
+    void StreamData(uint64_t id, uint16_t port, Buffer buf);
     //------------------------------------------------------------------------
     void KickClient(uint64_t id);
 
@@ -90,15 +97,16 @@ public:
 private:
     void AcceptConnectionThreadFn();
     void HandleConnectionThreadFn(uint64_t id);
+    void DataStreamThreadFn();
 
 private:
     ServerInfo m_ServerInfo;
 
     std::map<uint64_t, ClientInfo> m_Connections;
-    std::queue<Buffer> m_DataQueue;
+    std::queue<DataPacket> m_DataQueue;
     bool m_ServerIsRunning = false;
     Socket m_ServerSocket;
-    Socket m_ClientSocket;
+    Socket m_StreamSocket;
 
     DataReceivedFn m_DataReceivedCallback;
     ClientConnectFn m_ClientConnectCallback;

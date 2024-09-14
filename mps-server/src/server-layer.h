@@ -3,11 +3,9 @@
 
 #include <map>
 #include <memory>
-#include <queue>
 #include <stdint.h>
 #include <string>
 #include <string_view>
-#include <vector>
 
 #include "aero/core/layer.h"
 #include "aero/networking/server.h"
@@ -47,18 +45,17 @@ private:
     void OnCommand(uint64_t id, std::string_view cmd);
 
 private:
+    uint16_t m_Port = 0u;
+
     bool m_EnableConsole = true;
     std::unique_ptr<Console> m_Console = nullptr;
-    std::unique_ptr<aero::networking::Server> m_TCP;
-    std::unique_ptr<mps::Mps> m_MPS;
+
+    std::shared_ptr<aero::networking::Server> m_Server = nullptr;
     std::map<uint64_t, std::unique_ptr<mps::Mps>> m_Scanners;
 
-    uint16_t m_Port = 0u;
-    /*std::unique_ptr<aero::networking::Server> m_UDP;*/
+    std::map<uint64_t, std::string> m_Cmds;
 
     //- user input console for server application
-    /*std::string m_CmdString;*/
-    std::map<uint64_t, std::string> m_Cmds;
 
 
     // std::queue<Packets> m_ScanDataQueue;

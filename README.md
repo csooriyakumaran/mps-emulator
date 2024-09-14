@@ -2,7 +2,7 @@
 
 An emulated MPS-42xx pressure scanner.
 
-The emulator starts a TCP server on the default port 23 that accepts connections from multiple clients, and handles commands following the MPS format on a client-by-client basis. Scan data are generated psuedo-randomly following a normal distrubution with a standard deviation of ###. Scan data are transmitted to the requesting client via TCP connection or optionally (depending on the configuration) over a UDP stream. 
+The emulator starts a TCP server on the default port 23 that accepts connections from multiple clients, and handles commands following the MPS format on a client-by-client basis. Scan data are generated psuedo-randomly following a normal distrubution with a standard deviation of ###. Scan data are transmitted to the requesting client via TCP connection or optionally (depending on the configuration) over a UDP stream (the udp data streams from port 23). Since this is primarily intended to be run from the same machine as the target data acquisition software, the default udp port target must be different from the port which sends data. Consequently, the default target port is 24. This can be changed using the `SET IPUDP <ip> <port>` command. 
 
 ## Generating project files
 
@@ -145,9 +145,9 @@ Consult the MPS manual for more detailed descriptions of each command, including
 | `STOP` \| `<ESC>` (TelNet only)     | Stop a scan if one is started         |
 | `STATUS`                            | Returns the status. e.g.:<br> - `STATUS: READY`<br> - `STATUS: SCAN`<br> - `STATUS: CALZ`|
 | `CALZ`                              | Start a zero-cal (in the emulator this just resets the normal distrubution mean of the scan sampler to zero)                          |
-| `VALVESTATE`                        | Returns the valve state (always `PX` for the emulator)                          |
-| `TRIG` \| `<TAB>`                     | Returns one frame of data (requires  `SET TRIG 1`)                          |
-| `TREAD [<MODULE>]`                 | Returns the (simulated) module temperature on all or requested module (from 1 to 8). |
+| `VALVESTATE`                        | Returns the valve state (always `PX` for the emulator) ***NOT IMPLEMENTED***                         |
+| `TRIG` \| `<TAB>`                     | Returns one frame of data (requires  `SET TRIG 1`) ***NOT IMPLEMENTED***                         |
+| `TREAD [<MODULE>]`                 | Returns the (simulated) module temperature on all or requested module (from 1 to 8). ***NOT IMPLEMENTED***|
 | `SAVE [<cfg>]`                        | Save the configuration (not implemented) |
 | `SCAN`                              | Start a scan                          |
 
@@ -156,7 +156,6 @@ Consult the MPS manual for more detailed descriptions of each command, including
 | SYNTAX                              | DESCRIPTION                           |
 | ----------------------------------- | ------------------------------------- |
 | `LIST S`                            | Returns the scan settings             |
-| `LIST M`                            | Returns the ___ settings              |
 | `LIST UDP`                          | Returns the UDP settings              |
 
 ***SET COMMANDS***
@@ -165,6 +164,6 @@ Consult the MPS manual for more detailed descriptions of each command, including
 | ----------------------------------- | ------------------------------------- |
 | `SET RATE <RATE> [<OUTPUT RATE>]`   | Set the sampling and output rate of the scanner. <br> - `RATE` internal scan rate in Hz<br> - `OUTPUT RATE` rate at which data are sent. Defaults to `RATE` if ommitted. |
 | `SET ENUDP <OPT>`                   | `0`: Disable UDP<br>`1`: Enable UDP   |
-| `SET IPUDP <IP> <PORT>`             | Set the UPD target ip and port number (this is actually handled automatically in the emulator based on the address of the client which issues the `scan` command)|
+| `SET IPUDP <IP> <PORT>`             | Set the UPD target ip and port number (the ip address is actually handled automatically in the emulator based on the address of the client which issues the `scan` command, however a dummy ip address must still be specified)|
 
 

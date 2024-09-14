@@ -20,12 +20,12 @@ struct BinaryPacket
     uint32_t ptp_scan_start_time_ns;   // nanosections
     uint32_t external_trigger_time_us; // microseconds?
     float temperature[8];
-    /*float pressure[64];*/
-    union
-    {
-        float eu[64];
-        int32_t raw[64];
-    } pressure;
+    float pressure[64];
+    /*union*/
+    /*{*/
+    /*    float eu[64];*/
+    /*    int32_t raw[64];*/
+    /*} pressure;*/
     uint32_t frame_time_s;
     uint32_t frame_time_ns;
     uint32_t external_trigger_time_s;
