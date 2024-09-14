@@ -166,4 +166,11 @@ Consult the MPS manual for more detailed descriptions of each command, including
 | `SET ENUDP <OPT>`                   | `0`: Disable UDP<br>`1`: Enable UDP   |
 | `SET IPUDP <IP> <PORT>`             | Set the UPD target ip and port number (the ip address is actually handled automatically in the emulator based on the address of the client which issues the `scan` command, however a dummy ip address must still be specified)|
 
+## TODO 
+
+- [ ] Sending data over TCP
+- [ ] Saving / loading configurations from files
+
+
+
 
