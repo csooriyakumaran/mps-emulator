@@ -108,7 +108,7 @@ Because the console waits for user input, it will hang on reboot/shutdown until 
 
 ### Command Formatting
 
-Commands can be sent to the server from clients or the console (if prefixed by `/`) following the same format as described in the MPS manual. That is, commands must be less than 79 characters, and must terminate with \<CR\>\<LF\> (i.e., ascii-13 ascii-10). This implementation requires all upper case or all lower case.
+Commands can be sent to the server from clients (or the console if prefixed by `/`) following the same format as described in the MPS manual. That is, commands must be less than 79 characters, and must terminate with \<CR\>\<LF\> (i.e., ascii-13 ascii-10). This implementation requires all upper case or all lower case.
 
 e.g.:
 ```console
