@@ -165,8 +165,10 @@ void Server::DataStreamThreadFn()
     {
         while (is_not_empty())
         {
+            m_StreamLock.lock();
             DataPacket packet = m_DataQueue.front();
             m_DataQueue.pop();
+            m_StreamLock.unlock();
 
             if (packet.id == 0)
             {
