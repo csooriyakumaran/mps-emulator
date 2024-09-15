@@ -31,18 +31,18 @@ static bool s_WSAInitialized = false;
 
 static int GetError()
 {
-#ifndef PLATFORM_WINDOWS
+#ifdef PLATFORM_WINDOWS
+    return WSAGetLastError();
+#else
     return 0;
 #endif
-    return WSAGetLastError();
 }
 
 static bool InitializeNetworking()
 {
 #ifndef PLATFORM_WINDOWS
     return true;
-#endif
-
+#else
     s_WSAInstances++;
     if (s_WSAInitialized)
         return true;
@@ -53,7 +53,7 @@ static bool InitializeNetworking()
     if (WSAStartup(MAKEWORD(2, 2), &wsa_data) != 0)
     {
         LOG_ERROR_TAG(
-            "Networking", "Could not initialize WinSock. Error Code: {0}", WSAGetLastError()
+            "Networking", "Could not initialize WinSock. Error Code: {0}", GetError()
         );
         s_WSAInstances--;
         return false;
@@ -62,15 +62,14 @@ static bool InitializeNetworking()
     LOG_DEBUG_TAG("Networking", "WinSock v{0} initiallized successfully!", wsa_data.wVersion);
     s_WSAInitialized = true;
     return true;
+#endif
 }
 
 static void CleanupNetworking()
 {
-
 #ifndef PLATFORM_WINDOWS
     return;
-#endif
-
+#else
     s_WSAInstances--;
 
     if (s_WSAInstances > 0)
@@ -79,6 +78,7 @@ static void CleanupNetworking()
     LOG_DEBUG_TAG("Networking", "No remaining dependants: Clean up WSA");
     WSACleanup();
     s_WSAInitialized = false;
+#endif
 }
 
 enum class SocketType : uint16_t

@@ -43,13 +43,21 @@ The executable is stand alone so can be freely copied or moved. TBD: eventually 
 
 ### Visual Studio (vs2022)
 
+Generate the Visual Studio solution and prject files.
+```powershell
+scritps/setup.bat vs2022
+```
 Open the Visual Studio solution file and build/run the desired configuration from there. 
 
 ### MSBuild (vs2022)
 
+Generate the Visual Studio solution and prject files.
+```powershell
+scritps/setup.bat vs2022
+```
 If msbuild is installed on your system and in your system path, run the msbuild batch file from the root directory. 
 ```powershell
-scritps\msbuild.bat [CONFIGURTION] [COMMAND]
+scritps/msbuild.bat [CONFIGURTION] [COMMAND]
 ```
 | CONFIGURATION            | DESCRIPTION                                                   |
 | ------------------------ | ------------------------------------------------------------- |
@@ -63,17 +71,34 @@ scritps\msbuild.bat [CONFIGURTION] [COMMAND]
 
 e.g.:
 ```powershell
- scritps\msbuild.bat release run
+ scritps/msbuild.bat release run
 ```
 Intermediate and binary file can be removed by removing the .\bin\ and .\biuld\ directories, or by running
 ```powershell
- scripts\msbuild.bat clean
+ scripts/msbuild.bat clean
 ```
 This cleans both debug and release files. 
 
 ### Make (gmake \| gmake2)
 
-For compliation on linux (not fully tested), or a windows development enviroment that uses the gnu toolchain (e.g.,[`wsl`](https://learn.microsoft.com/en-us/windows/wsl/install),  [`MSYS2`](https://www.msys2.org/) or [`mingw`](https://www.mingw-w64.org/)), the premake action `gmake` or `gmake2` can be used (instead of `vs2022`). This will generate makefiles that can be compiled using the [`gnu make`](https://www.gnu.org/software/make/) executable. 
+#### GNU on Windows
+For a Windows development enviroment that uses the gnu toolchain (e.g., [`MSYS2`](https://www.msys2.org/) or [`mingw`](https://www.mingw-w64.org/)), the premake action `gmake` or `gmake2` can be used (instead of `vs2022`). This will generate makefiles that can be compiled using the [`gnu make`](https://www.gnu.org/software/make/) executable. 
+```powershell
+ scripts\setup.bat gmake
+ make config=release
+```
+
+#### Linux
+Only limited testing has been done in a linux enviromenent using [`wsl`](https://learn.microsoft.com/en-us/windows/wsl/install). TCP communication seems to work fine but the sever does not respect the requested port number. UDP streaming is also not working. 
+
+Download the appropriate pre-built [`premake`](https://premake.github.io/download/) binary for your OS. 
+
+Generate the Makefiles, build, and run. 
+```sh
+ ./path-to-premake-for-linux/premake5 --file=build-project.lua gmake
+ make config=release
+ ./bin/Release-linux-x86_64/mps-server/mps-server --disable-console --port 5888
+```
 
 ### Cleaning
 

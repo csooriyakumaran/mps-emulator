@@ -93,6 +93,7 @@ void ServerLayer::OnClientConnected(uint64_t id)
     mps::ScannerCfg cfg;
     m_Scanners[id] = std::make_unique<mps::Mps>(cfg, id, m_Server);
     m_Scanners[id]->Start();
+    m_Server->SendString(id, "\r\n>");
 }
 
 void ServerLayer::OnClientDisconnected(uint64_t id)
