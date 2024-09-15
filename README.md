@@ -15,11 +15,11 @@ cd mps-emulator
 ```
 2. Generate build files for the target compiler
 ```powershell
-scritps/setup.bat [ACTION]
+scripts/setup.bat [ACTION]
 ```
 e.g:
 ```powershell
-scritps/setup.bat vs2022
+scripts/setup.bat vs2022
 ```
 This will generate a vs2022 solution file in the root, and project files in each project directory (e.g., mps-server/mps-server.vcsproj). The build system is [`premake`](https://premake.github.io/), since I couldn't be bothered to learn CMake. The premake binary is included in `./build-tools/premake/` along with the license. To list the all supported compiler targets and premake actions run the `scritp/setup.bat` file with no arguments, or consult the premake [`docs`](https://premake.github.io/docs/). The following should be all that is needed for this project. 
 
@@ -45,7 +45,7 @@ The executable is stand alone so can be freely copied or moved. TBD: eventually 
 
 Generate the Visual Studio solution and prject files.
 ```powershell
-scritps/setup.bat vs2022
+scripts/setup.bat vs2022
 ```
 Open the Visual Studio solution file and build/run the desired configuration from there. 
 
@@ -53,11 +53,11 @@ Open the Visual Studio solution file and build/run the desired configuration fro
 
 Generate the Visual Studio solution and prject files.
 ```powershell
-scritps/setup.bat vs2022
+scripts/setup.bat vs2022
 ```
 If msbuild is installed on your system and in your system path, run the msbuild batch file from the root directory. 
 ```powershell
-scritps/msbuild.bat [CONFIGURTION] [COMMAND]
+scripts/msbuild.bat [CONFIGURTION] [COMMAND]
 ```
 | CONFIGURATION            | DESCRIPTION                                                   |
 | ------------------------ | ------------------------------------------------------------- |
@@ -71,7 +71,7 @@ scritps/msbuild.bat [CONFIGURTION] [COMMAND]
 
 e.g.:
 ```powershell
- scritps/msbuild.bat release run
+ scripts/msbuild.bat release run
 ```
 Intermediate and binary file can be removed by removing the .\bin\ and .\biuld\ directories, or by running
 ```powershell

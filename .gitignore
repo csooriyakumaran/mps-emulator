@@ -56,4 +56,6 @@ compile_commands/
 .cache/
 **/__pycache__/
 
+releases
+
 !build-tools/premake/*
