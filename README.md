@@ -4,7 +4,7 @@ An emulated MPS-42xx pressure scanner.
 
 The emulator starts a TCP server on the default port 23 that accepts connections from multiple clients, and handles commands following the MPS format on a client-by-client basis.
 
-Scan data are generated psuedo-randomly following a normal distrubution with a standard deviation of about 0.35 Pa. Scan data are transmitted to the requesting client via over a UDP stream (the udp data streams from port 23). Since this is primarily intended to be run from the same machine as the target data acquisition software, the default udp port target must be different from the port which sends data. Consequently, the default target port is 24. This can be changed using the `SET IPUDP <ip> <port>` command. 
+Scan data are generated psuedo-randomly following a normal distrubution with a standard deviation of about 0.35 Pa. Scan data are transmitted to the requesting client via over a UDP stream (the udp data streams from port 23). Since this is primarily intended to be run from the same machine as the target data acquisition software, the default udp port target must be different from the port which sends data. Consequently, the default target port is 24. This can be changed using the `SET IPUDP <ip> <port>` command. To better simulate connecting to a physical scanner, this emulator could be run from inside a container, vm, or separate machine.  
 
 ## Generating project files
 
