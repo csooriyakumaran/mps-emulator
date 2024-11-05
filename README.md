@@ -1,7 +1,5 @@
 # MPS-EMULATOR
 
-[![GitHub version](https://badge.fury.io/gh/conventional-changelog%2Fstandard-version.svg)](https://badge.fury.io/gh/conventional-changelog%2Fstandard-version)
-
 An emulated MPS-42xx pressure scanner.
 
 The emulator starts a TCP server on the default port 23 that accepts connections from multiple clients, and handles commands following the MPS format on a client-by-client basis.
