@@ -1,11 +1,11 @@
 #ifndef _MPS_ARGS_H_
 #define _MPS_ARGS_H_
 
-#include <stdlib.h>
-#include <iostream>
-#include <vector>
-#include <string_view>
 #include "aero/core/log.h"
+#include <iostream>
+#include <stdlib.h>
+#include <string_view>
+#include <vector>
 
 #include "version.h"
 
@@ -14,8 +14,8 @@ namespace args
 
 struct Options
 {
-    uint16_t port = 23;
-    bool should_close = false;
+    uint16_t port       = 23;
+    bool should_close   = false;
     bool enable_console = true;
 };
 
@@ -28,8 +28,7 @@ static bool has_option_flag(const std::vector<std::string_view>& args, const std
     return false;
 }
 
-static std::string_view
-get_option_value(const std::vector<std::string_view>& args, const std::string_view name)
+static std::string_view get_option_value(const std::vector<std::string_view>& args, const std::string_view name)
 {
     for (auto it = args.begin(), end = args.end(); it != end; ++it)
         if (*it == name)
@@ -45,8 +44,8 @@ bool arg_to_num(const std::string_view& opt, T& out)
     if (opt.empty())
         return false;
 
-    const char* first          = opt.data();
-    const char* last           = opt.data() + opt.length();
+    const char* first = opt.data();
+    const char* last  = opt.data() + opt.length();
 
     std::from_chars_result res = std::from_chars(first, last, out);
 
@@ -65,10 +64,10 @@ static void PrintHelp(char* name)
 
     std::cout << "[-p <port> | --port <port>]\n\n";
     std::cout << "[--disable-console]\n\n";
-    
+
     std::cout << "\tThis program emulates a Scanivalve MPS4200 series pressure scanner \n";
     std::cout << "\tFor use in developing a client application for communicating with \n";
-    std::cout << "\tand receiving data from a pressure scanner. A TCP server is started \n"; 
+    std::cout << "\tand receiving data from a pressure scanner. A TCP server is started \n";
     std::cout << "\ton the speficied port (or default of 65432). Simulated scan data is \n";
     std::cout << "\tis sent over a UDP socket by default\n";
 }
@@ -80,9 +79,9 @@ static Options ParseAguments(int argc, char** argv)
     const std::vector<std::string_view> args(argv, argv + argc);
     std::string_view option_val;
 
-    if (has_option_flag(args, "-v") || has_option_flag(args, "--verison"))
+    if (has_option_flag(args, "-v") || has_option_flag(args, "--version"))
     {
-        std::cout << "Aiolos (c) MPS Server Emulator v" << VersionString <<'\n';
+        std::cout << "Aiolos (c) MPS Server Emulator v" << VersionString << '\n';
         opts.should_close = true;
         return opts;
     }
