@@ -188,7 +188,7 @@ std::string mps::Mps::ParseCommands(std::string cmd)
     std::vector<std::string> tokens = utils::SplitString(cmd, " \r\n");
 
     if (tokens[0] == "VER" || tokens[0] == "ver" || tokens[0] == "VERSION" || tokens[0] == "version")
-        return std::string("Aiolos (c) MPS Server Emulator v.") + VersionString + "\r\n>";
+        return std::string("Aiolos (c) MPS Server Emulator v") + VersionString + "\r\n>";
         // return "Aiolos (c) MPS Server Emulator v.2024.0\r\n>";
 
     if (tokens[0] == "STATUS" || tokens[0] == "status")
