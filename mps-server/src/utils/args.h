@@ -7,6 +7,8 @@
 #include <string_view>
 #include "aero/core/log.h"
 
+#include "version.h"
+
 namespace args
 {
 
@@ -77,6 +79,13 @@ static Options ParseAguments(int argc, char** argv)
 
     const std::vector<std::string_view> args(argv, argv + argc);
     std::string_view option_val;
+
+    if (has_option_flag(args, "-v") || has_option_flag(args, "--verison"))
+    {
+        std::cout << "Aiolos (c) MPS Server Emulator v." << VersionString <<'\n';
+        opts.should_close = true;
+        return opts;
+    }
 
     if (has_option_flag(args, "-h") || has_option_flag(args, "--help"))
     {

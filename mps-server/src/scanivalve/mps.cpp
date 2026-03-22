@@ -8,10 +8,9 @@
 #include "scanivalve/mps-config.h"
 #include "scanivalve/mps-data.h"
 #include "utils/string-utils.h"
+#include "version.h"
 
-mps::Mps::Mps(
-    const mps::ScannerCfg& cfg, uint64_t id, std::shared_ptr<aero::networking::Server> svr
-)
+mps::Mps::Mps(const mps::ScannerCfg& cfg, uint64_t id, std::shared_ptr<aero::networking::Server> svr)
     : m_cfg(cfg),
       m_ThreadPool(2),
       m_ClientID(id),
@@ -46,7 +45,8 @@ void mps::Mps::StartScan()
 {
     std::random_device rd{};
     std::mt19937 gen{rd()};
-    m_NormalDistribution = std::normal_distribution<float>(0.0f, 5.07e-5f);
+    // m_NormalDistribution = std::normal_distribution<float>(1.0f, 5.07e-5f);
+    m_NormalDistribution = std::normal_distribution<float>(1.0f, 5.07e-2f);
 
     //- get start time and conver to seconds/nanosecons
 
@@ -55,17 +55,17 @@ void mps::Mps::StartScan()
 
     mps::BinaryPacket* data = m_Data.As<mps::BinaryPacket>();
 
-    data->type              = 0x0A; // BinaryPacket
-    data->size              = sizeof(BinaryPacket);
-    data->serial_number     = m_cfg.serial_number;
-    data->framerate         = m_cfg.framerate;
-    data->valve_status      = GetValveStatus();
-    data->unit_index        = m_cfg.unit_index;
-    data->unit_conversion   = mps::ScanUnitConversion[m_cfg.unit_index];
+    data->type            = 0x0A; // BinaryPacket
+    data->size            = sizeof(BinaryPacket);
+    data->serial_number   = m_cfg.serial_number;
+    data->framerate       = m_cfg.framerate;
+    data->valve_status    = GetValveStatus();
+    data->unit_index      = m_cfg.unit_index;
+    data->unit_conversion = mps::ScanUnitConversion[m_cfg.unit_index];
     // auto tp          = std::chrono::high_resolution_clock::now();
-    auto tp                      = std::chrono::steady_clock::now();
-    auto tp_s                    = std::chrono::time_point_cast<std::chrono::seconds>(tp);
-    auto tp_ns                   = tp - tp_s;
+    auto tp    = std::chrono::steady_clock::now();
+    auto tp_s  = std::chrono::time_point_cast<std::chrono::seconds>(tp);
+    auto tp_ns = tp - tp_s;
 
     m_StartScanTime              = tp;
     m_StartScanTimeS             = static_cast<uint32_t>(tp_s.time_since_epoch().count());
@@ -73,9 +73,9 @@ void mps::Mps::StartScan()
     data->ptp_scan_start_time_s  = m_StartScanTimeS;
     data->ptp_scan_start_time_ns = m_StartScanTimeNS;
 
-    m_naverages                  = (int)(m_cfg.framerate / m_cfg.out_rate);
-    m_Scanning                   = true;
-    m_Status                     = mps::Status::SCAN;
+    m_naverages = (int)(m_cfg.framerate / m_cfg.out_rate);
+    m_Scanning  = true;
+    m_Status    = mps::Status::SCAN;
     // LOG_INFO_TAG(m_Name, "Scan started at {}", tp);
 }
 
@@ -104,22 +104,18 @@ void mps::Mps::ScanThreadFn()
         {
             auto frame_end = frame_start + std::chrono::nanoseconds((int)(1e9 / m_cfg.out_rate));
 
-            auto dt        = frame_start - m_StartScanTime;
-            auto dt_s      = std::chrono::duration_cast<std::chrono::seconds>(dt);
-            auto dt_ns     = dt - dt_s;
+            auto dt    = frame_start - m_StartScanTime;
+            auto dt_s  = std::chrono::duration_cast<std::chrono::seconds>(dt);
+            auto dt_ns = dt - dt_s;
 
-            LOG_DEBUG_TAG(
-                m_Name, "Frame start time: {:.8f} s ({} Hz)", dt_s.count() + dt_ns.count() / 1e9,
-                m_cfg.out_rate
-            );
+            LOG_DEBUG_TAG(m_Name, "Frame start time: {:.8f} s ({} Hz)", dt_s.count() + dt_ns.count() / 1e9, m_cfg.out_rate);
             float p[64];
             std::memset(p, 0, 64 * sizeof(float));
 
             auto subframe_start = frame_start;
             for (size_t i = 0; i < (size_t)m_naverages; ++i)
             {
-                auto subframe_end =
-                    subframe_start + std::chrono::nanoseconds((int)(1e9 / m_cfg.framerate));
+                auto subframe_end = subframe_start + std::chrono::nanoseconds((int)(1e9 / m_cfg.framerate));
 
                 for (int j = 0; j < 64; ++j)
                     p[j] += Sample() / m_naverages;
@@ -127,10 +123,7 @@ void mps::Mps::ScanThreadFn()
                 auto sdt    = subframe_start - frame_start;
                 auto sdt_s  = std::chrono::duration_cast<std::chrono::seconds>(sdt);
                 auto sdt_ns = sdt - sdt_s;
-                LOG_DEBUG_TAG(
-                    m_Name, "SubFrame {:04d}: {:.8f} s ({} Hz) P[0] = {:.4f}", i,
-                    sdt_s.count() + sdt_ns.count() / 1e9, m_cfg.framerate, p[0]
-                );
+                LOG_DEBUG_TAG(m_Name, "SubFrame {:04d}: {:.8f} s ({} Hz) P[0] = {:.4f}", i, sdt_s.count() + sdt_ns.count() / 1e9, m_cfg.framerate, p[0]);
 
                 std::this_thread::sleep_until(subframe_end);
                 subframe_start = subframe_end;
@@ -141,15 +134,11 @@ void mps::Mps::ScanThreadFn()
             for (size_t i = 0; i < 8; ++i)
                 t[i] = 32.0f;
 
-
             auto end_dt    = frame_end - m_StartScanTime;
             auto end_dt_s  = std::chrono::duration_cast<std::chrono::seconds>(end_dt);
             auto end_dt_ns = end_dt - end_dt_s;
 
-            LOG_DEBUG_TAG(
-                m_Name, "Frame end time: {:.8f} s ({} Hz) p[0] = {} Pa",
-                end_dt_s.count() + end_dt_ns.count() / 1e9, m_cfg.out_rate, p[0]
-            );
+            LOG_DEBUG_TAG(m_Name, "Frame end time: {:.8f} s ({} Hz) p[0] = {} Pa", end_dt_s.count() + end_dt_ns.count() / 1e9, m_cfg.out_rate, p[0]);
 
             mps::BinaryPacket* data = m_Data.As<mps::BinaryPacket>();
             data->frame += 1;
@@ -164,17 +153,14 @@ void mps::Mps::ScanThreadFn()
                 m_Server->StreamData(m_ClientID, m_cfg.udp_port, aero::Buffer::Copy(data, sizeof(mps::BinaryPacket)));
             //- TODO(Chris): implement other data transfer options
 
-            if ( m_cfg.fps && (m_cfg.fps == data->frame) )
+            if (m_cfg.fps && (m_cfg.fps == data->frame))
             {
                 this->StopScan();
                 m_Server->SendString(m_ClientID, "\r\n>");
             }
 
-
-
             std::this_thread::sleep_until(frame_end);
             frame_start = frame_end;
-
         }
 
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
@@ -201,9 +187,9 @@ std::string mps::Mps::ParseCommands(std::string cmd)
 
     std::vector<std::string> tokens = utils::SplitString(cmd, " \r\n");
 
-    if (tokens[0] == "VER" || tokens[0] == "ver" || tokens[0] == "VERSION" ||
-        tokens[0] == "version")
-        return "Aiolos (c) MPS Server Emulator v.2024.0\r\n>";
+    if (tokens[0] == "VER" || tokens[0] == "ver" || tokens[0] == "VERSION" || tokens[0] == "version")
+        return std::string("Aiolos (c) MPS Server Emulator v.") + VersionString + "\r\n>";
+        // return "Aiolos (c) MPS Server Emulator v.2024.0\r\n>";
 
     if (tokens[0] == "STATUS" || tokens[0] == "status")
         return std::string("STATUS: ") + this->GetStatus() + "\r\n>";
@@ -299,15 +285,15 @@ std::string mps::Mps::ParseCommands(std::string cmd)
         if (tokens[1] == "S" || tokens[1] == "s")
         {
             //- TODO(Chris): these should just read the cfg files and return the commands stored there.
-            // build a string stream response. 
+            // build a string stream response.
             std::stringstream out;
             out << "SET RATE " << m_cfg.framerate << " " << m_cfg.out_rate << "\r\n";
             out << "SET FPS " << m_cfg.fps << "\r\n";
             out << "SET UNITS " << ScanUnitsNames[m_cfg.unit_index] << " " << ScanUnitConversion[m_cfg.unit_index] << "\r\n";
             out << "SET FORMAT T F, F B, B B\r\n"; //- TODO(Chris): implement
-            out << "SET TRIG 0 \r\n"; //- TODO(Chris): implement 
-            out << "SET ENFTP 0 \r\n"; //- TODO(Chris): implement 
-            out << "SET OPTIONS 0 0 16 \r\n"; //- TODO(Chris): implement 
+            out << "SET TRIG 0 \r\n";              //- TODO(Chris): implement
+            out << "SET ENFTP 0 \r\n";             //- TODO(Chris): implement
+            out << "SET OPTIONS 0 0 16 \r\n";      //- TODO(Chris): implement
             out << ">";
 
             return out.str();
