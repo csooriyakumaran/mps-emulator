@@ -96,7 +96,9 @@ struct Socket
     sockaddr_in address;
 };
 
-static bool CreateSocket(Socket& s, SocketType type, uint16_t port)
+static bool CreateSocket(
+    Socket& s, SocketType type, uint16_t port, const std::string& bind_ip = "0.0.0.0"
+)
 {
     LOG_DEBUG_TAG("Networking", "Creating {} socket ...", SocketTypeName[(size_t)type]);
 
@@ -119,9 +121,32 @@ static bool CreateSocket(Socket& s, SocketType type, uint16_t port)
         SocketTypeName[(size_t)type], port
     );
 
-    s.address.sin_family      = AF_INET;
-    s.address.sin_port        = htons(port);
-    s.address.sin_addr.s_addr = INADDR_ANY;
+    s.address.sin_family = AF_INET;
+    s.address.sin_port   = htons(port);
+
+    // If no bind IP is specified or we explicitly get 0.0.0.0, bind to all interfaces
+    if (bind_ip.empty() || bind_ip == "0.0.0.0")
+    {
+        s.address.sin_addr.s_addr = htonl(INADDR_ANY);
+    }
+    else
+    {
+#ifdef PLATFORM_WINDOWS
+        // On Windows use InetPtonA to parse the IPv4 address
+        if (InetPtonA(AF_INET, bind_ip.c_str(), &s.address.sin_addr) != 1)
+        {
+            LOG_ERROR_TAG("Networking", "Invalid bind IP address: {}", bind_ip);
+            return false;
+        }
+#else
+        // On POSIX use inet_pton to parse the IPv4 address
+        if (inet_pton(AF_INET, bind_ip.c_str(), &s.address.sin_addr) != 1)
+        {
+            LOG_ERROR_TAG("Networking", "Invalid bind IP address: {}", bind_ip);
+            return false;
+        }
+#endif
+    }
 
     return true;
 }
