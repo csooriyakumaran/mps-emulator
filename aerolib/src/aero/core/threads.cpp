@@ -38,13 +38,6 @@ aero::ThreadPool::ThreadPool(size_t workers)
 aero::ThreadPool::~ThreadPool()
 {
     StopAll();
-    {
-        std::unique_lock<std::mutex> lock(m_QueueMutex);
-        m_Stop = true;
-    }
-
-    m_Condition.notify_all();
-        /*t.request_stop();*/
 }
 
 void aero::ThreadPool::Enqueue(ThreadFn fn, std::string name)
@@ -59,12 +52,38 @@ void aero::ThreadPool::Enqueue(ThreadFn fn, std::string name)
 
 void aero::ThreadPool::StopAll()
 {
-    
-    for (auto& t : m_Threads)
-    {   
-        uint64_t  thread_id = std::hash<std::thread::id>()(t.get_id());
-        LOG_DEBUG_TAG("ThreadPool", "Reqesting stop on {}", thread_id);
-        // LOG_DEBUG_TAG("ThreadPool", "Reqesting stop on {}", t.get_id());
-        bool to_stop = t.request_stop();
+    // - tell workers to stop when the queue is drained
+    {
+        std::unique_lock<std::mutex> lock(m_QueueMutex);
+        m_Stop = true;
     }
+
+    // - wake all workers so they can see m_Stop and/or any remaining tasks
+    m_Condition.notify_all();
+    
+    // - request cooperative stop on each jthread (for code that uses stop_token)
+    for (auto& t : m_Threads)
+    {
+        if (t.joinable())
+        {
+            uint64_t  thread_id = std::hash<std::thread::id>()(t.get_id());
+            LOG_DEBUG_TAG("ThreadPool", "Reqesting stop on {}", thread_id);
+            t.request_stop();
+        }
+    }
+
+    // - wait for all worker threads to finish
+    for (auto& t: m_Threads)
+    {
+        if (t.joinable())
+        {
+            uint64_t  thread_id = std::hash<std::thread::id>()(t.get_id());
+            LOG_DEBUG_TAG("ThreadPool", "Reqesting stop on {}", thread_id);
+            t.join();
+        }
+    }
+
+    // - clear the vector to release the thread objects
+    m_Threads.clear();
+
 }
