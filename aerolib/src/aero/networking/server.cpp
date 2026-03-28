@@ -16,18 +16,16 @@ Server::~Server() { Stop(); }
 void Server::Start()
 {
 
-    LOG_INFO_TAG(m_ServerInfo.name, "Starting server on port {}", m_ServerInfo.port);
+    LOG_INFO_TAG(m_ServerInfo.name, "Starting server on {}:{}", m_ServerInfo.bind_ip, m_ServerInfo.port);
 
     if (!InitializeNetworking())
     {
-        LOG_ERROR_TAG(
-            m_ServerInfo.name, "Could not initialize Networking API. Aborting server startup."
-        );
+        LOG_ERROR_TAG(m_ServerInfo.name, "Could not initialize Networking API. Aborting server startup.");
         return;
     }
 
     //- create TCP Socket
-    if (!CreateSocket(m_ServerSocket, SocketType::TCP, m_ServerInfo.port))
+    if (!CreateSocket(m_ServerSocket, SocketType::TCP, m_ServerInfo.port, m_ServerInfo.bind_ip))
     {
         LOG_ERROR_TAG(m_ServerInfo.name, "Could not create Socket. Aborting server startup.");
 
@@ -49,17 +47,18 @@ void Server::Start()
 
     m_Threads.Enqueue([this]() { AcceptConnectionThreadFn(); }, "AcceptConnectionThreadFn");
 
-    //- create UDP Socket
-    if (!CreateSocket(m_StreamSocket, SocketType::UDP, m_ServerInfo.port))
+    if (m_ServerInfo.enable_udp)
     {
-        LOG_ERROR_TAG(
-            m_ServerInfo.name, "Could not create stream Socket. Aborting server startup."
-        );
+        //- create UDP Socket
+        if (!CreateSocket(m_StreamSocket, SocketType::UDP, m_ServerInfo.port, m_ServerInfo.bind_ip))
+        {
+            LOG_ERROR_TAG(m_ServerInfo.name, "Could not create stream Socket. Aborting server startup.");
 
-        CleanupNetworking();
-        return;
+            CleanupNetworking();
+            return;
+        }
+        m_Threads.Enqueue([this]() { DataStreamThreadFn(); }, "DataStreamThreadFn");
     }
-    m_Threads.Enqueue([this]() { DataStreamThreadFn(); }, "DataStreamThreadFn");
 }
 
 void Server::Stop()
@@ -100,9 +99,7 @@ void Server::AcceptConnectionThreadFn()
         client.ip    = std::string(ipstr);
         client.port  = conn.address.sin_port;
 
-        LOG_INFO_TAG(
-            m_ServerInfo.name, "Connection esbatlished with {}:{}", client.ip, client.port
-        );
+        LOG_INFO_TAG(m_ServerInfo.name, "Connection esbatlished with {}:{}", client.ip, client.port);
         m_Threads.Enqueue([this, client]() { HandleConnectionThreadFn(client.id); });
 
         if (m_ClientConnectCallback)
@@ -124,16 +121,15 @@ void Server::HandleConnectionThreadFn(uint64_t id)
 
         auto& client = m_Connections[id];
 
-        LOG_DEBUG_TAG(
-            m_ServerInfo.name, "Waiting for data from client at {}:{}", client.ip, client.port
-        );
+        LOG_DEBUG_TAG(m_ServerInfo.name, "Waiting for data from client at {}:{}", client.ip, client.port);
 
         //- blocking
         int bytes_read = recv((SOCKET)id, (char*)buf.data, (int)buf.size, 0);
 
         if (bytes_read < 0)
         {
-            LOG_ERROR_TAG(m_ServerInfo.name, "Failed on recv: client id {}", id);
+            int err = WSAGetLastError();
+            LOG_ERROR_TAG(m_ServerInfo.name, "Failed on recv: client id {}, errno {}", id, err);
             break;
         }
         if (bytes_read == 0)
@@ -153,61 +149,42 @@ void Server::HandleConnectionThreadFn(uint64_t id)
 void Server::DataStreamThreadFn()
 {
 
-    std::function<bool(void)> is_not_empty = [this]()
-    {
-        this->m_StreamLock.lock();
-        bool is_not_empty = !this->m_DataQueue.empty();
-        this->m_StreamLock.unlock();
-        return is_not_empty;
-    };
-    LOG_INFO_TAG(m_ServerInfo.name, "Starting UDP thread function, waiting for data to send");
+    LOG_INFO_TAG(m_ServerInfo.name, "UDP socket ready to send data");
     while (m_ServerIsRunning)
     {
-        while (is_not_empty())
+        bool packet_available = true;
+        DataPacket packet;
         {
-            m_StreamLock.lock();
-            DataPacket packet = m_DataQueue.front();
-            m_DataQueue.pop();
-            m_StreamLock.unlock();
-
-            if (packet.id == 0)
+            std::lock_guard<std::mutex> lock(m_StreamLock);
+            if (m_DataQueue.empty())
             {
-                LOG_WARN_TAG(
-                    m_ServerInfo.name,
-                    "Cannot stream data from the console since it has no knowlege of the clients"
-                );
-                packet.data.Release();
-                continue;
+                packet_available = false;
             }
-
-            // if the target cleint has disconnected we want to disregard this packet
-            if (m_Connections.find(packet.id) == m_Connections.end())
+            else
             {
-                LOG_ERROR_TAG(
-                    m_ServerInfo.name, "Cannot stream data: No registered client with id {}",
-                    packet.id
-                );
-                packet.data.Release();
-                continue;
+                packet = std::move(m_DataQueue.front());
+                m_DataQueue.pop();
             }
-
-            ClientInfo& client = m_Connections[packet.id];
-            struct sockaddr_in client_addr;
-            client_addr.sin_family      = AF_INET;
-            client_addr.sin_port        = htons(packet.port);
-            client_addr.sin_addr.s_addr = inet_addr(client.ip.c_str());
-
-            LOG_DEBUG_TAG(m_ServerInfo.name, "Streaming data to {}:{}", client.ip, packet.port);
-
-            sendto(
-                m_StreamSocket.socket, (char*)packet.data.data, (int)packet.data.size, 0,
-                (struct sockaddr*)&client_addr, sizeof(client_addr)
-            );
-
-            packet.data.Release();
         }
 
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        if (!packet_available)
+        {
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+            continue;
+        }
+
+        struct sockaddr_in addr{};
+        addr.sin_family = AF_INET;
+        addr.sin_port   = htons(packet.port);
+        inet_pton(AF_INET, packet.ip.c_str(), &addr.sin_addr);
+
+        LOG_DEBUG_TAG(
+            m_ServerInfo.name, "Streaming {} bytes of data to {}:{}", packet.data.size, packet.ip, packet.port
+        );
+
+        sendto(m_StreamSocket.socket, packet.data.As<char>(), (int)packet.data.size, 0, (sockaddr*)&addr, sizeof(addr));
+
+        packet.data.Release();
     }
 }
 
@@ -231,7 +208,7 @@ void Server::SendBuffer(uint64_t id, Buffer buf)
     if (m_Connections.find(id) == m_Connections.end())
     {
         LOG_ERROR_TAG(m_ServerInfo.name, "No registered client with id {}", id);
-        // buf.Release();
+        buf.Release();
         return;
     }
 
@@ -239,7 +216,7 @@ void Server::SendBuffer(uint64_t id, Buffer buf)
 
     send((SOCKET)client.id, (char*)buf.data, (int)buf.size, 0);
 
-    // buf.Release();
+    buf.Release();
     return;
 }
 
@@ -251,26 +228,48 @@ void Server::SendBufferToAll(Buffer buf)
     buf.Release();
 }
 
-void Server::SendString(uint64_t id, const std::string& str)
-{
-    SendBuffer(id, Buffer(str.data(), str.size()));
-}
+void Server::SendString(uint64_t id, const std::string& str) { SendBuffer(id, Buffer::Copy(str.data(), str.size())); }
 
-void Server::SendStringToAll(const std::string& str)
-{
-    SendBufferToAll(Buffer(str.data(), str.size()));
-}
+void Server::SendStringToAll(const std::string& str) { SendBufferToAll(Buffer::Copy(str.data(), str.size())); }
 
-bool Server::IsClientConnected(uint64_t id) const
-{
-    return !(m_Connections.find(id) == m_Connections.end());
-}
+bool Server::IsClientConnected(uint64_t id) const { return !(m_Connections.find(id) == m_Connections.end()); }
 
 void Server::StreamData(uint64_t id, uint16_t port, Buffer buf)
 {
-    m_StreamLock.lock();
-    m_DataQueue.push({id, port, aero::Buffer::Copy(buf.data, buf.size)});
-    m_StreamLock.unlock();
+    auto it = m_Connections.find(id);
+    if (it == m_Connections.end())
+    {
+        buf.Release();
+        return;
+    }
+
+    const auto& client = it->second;
+
+    DataPacket packet;
+    packet.ip   = client.ip;
+    packet.port = port;
+    packet.data = aero::Buffer::Copy(buf.data, buf.size);
+
+    {
+        std::lock_guard<std::mutex> lock(m_StreamLock);
+        m_DataQueue.push(std::move(packet));
+    }
+
+    buf.Release();
+}
+
+void Server::StreamTo(const std::string& ip, uint16_t port, Buffer buf)
+{
+    DataPacket packet;
+    packet.ip   = ip;
+    packet.port = port;
+    packet.data = aero::Buffer::Copy(buf.data, buf.size);
+
+    {
+        std::lock_guard<std::mutex> lock(m_StreamLock);
+        m_DataQueue.push(std::move(packet));
+    }
+
     buf.Release();
 }
 
