@@ -7,15 +7,16 @@
 aero::Application* aero::CreateApplication(int argc, char** argv)
 {
     args::Options opts = args::ParseAguments(argc, argv);
+
     if (opts.should_close)
         return nullptr;
 
     aero::AppSpec spec;
     spec.Name              = "MPS Emulator";
-    spec.SleepMilliseconds = 2000;
+    spec.SleepMilliseconds = 100;
 
     aero::Application* app = new aero::Application(spec);
-    app->PushLayer<ServerLayer>(opts.port, opts.enable_console);
+    app->PushLayer<ServerLayer>(opts.device_type, opts.bind_ip, opts.port, opts.enable_console);
 
     return app;
 }
