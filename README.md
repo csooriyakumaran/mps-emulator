@@ -193,9 +193,7 @@ Consult the MPS manual for more detailed descriptions of each command, including
 
 ## TODO 
 
-- [ ] Sending data over TCP
+- [x] Sending data over TCP
 - [ ] Saving / loading configurations from files
-- [ ] Implement the same logic employed by Scanivale to calculate the scan and output rate based on the values set by `SET RATE`
-
-
+- [x] Implement the same logic employed by Scanivale to calculate the scan and output rate based on the values set by `SET RATE`
 
