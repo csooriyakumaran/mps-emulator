@@ -17,9 +17,9 @@
 / -------------------------------------------------------------------------- */
 #include <functional>
 #include <map>
+#include <mutex>
 #include <stdint.h>
 #include <string>
-#include <mutex>
 
 #include "aero/core/buffer.h"
 #include "aero/core/threads.h"
@@ -39,13 +39,15 @@ struct ServerInfo
 {
     std::string name     = "Server";
     size_t workers       = 1;
+    std::string bind_ip  = "0.0.0.0";
     uint16_t port        = 0u;
     uint32_t buffer_size = 4096;
+    bool enable_udp      = true;
 };
 
 struct DataPacket
 {
-    uint64_t id;
+    std::string ip;
     uint16_t port;
     aero::Buffer data;
 };
@@ -89,6 +91,7 @@ public:
     }
 
     void StreamData(uint64_t id, uint16_t port, Buffer buf);
+    void StreamTo(const std::string& ip, uint16_t port, Buffer buf);
     //------------------------------------------------------------------------
     void KickClient(uint64_t id);
 

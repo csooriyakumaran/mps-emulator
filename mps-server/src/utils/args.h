@@ -14,9 +14,11 @@ namespace args
 
 struct Options
 {
-    uint16_t port       = 23;
-    bool should_close   = false;
-    bool enable_console = true;
+    uint32_t device_type = 4264;
+    uint16_t port        = 23;
+    std::string bind_ip  = "127.0.0.1";
+    bool should_close    = false;
+    bool enable_console  = true;
 };
 
 static bool has_option_flag(const std::vector<std::string_view>& args, const std::string_view name)
@@ -60,16 +62,27 @@ bool arg_to_num(const std::string_view& opt, T& out)
 static void PrintHelp(char* name)
 {
 
-    std::cout << "\nusage:\tmps-server.exe ";
+    std::cout << "\nusage:\n";
+    std::cout << "  mps-server.exe ";
+    std::cout << "[--help] ";
+    std::cout << "[--version] ";
+    std::cout << "[--enable-console] ";
+    std::cout << "[--type <device-type>] ";
+    std::cout << "[--port <port>] ";
+    std::cout << "[--bind-ip <ip>] ";
+    std::cout << "\n\n";
 
-    std::cout << "[-p <port> | --port <port>]\n\n";
-    std::cout << "[--disable-console]\n\n";
+    std::cout << "\nAn emulated MPS4200-series scanner (based on firmware version 4.01)\n";
 
-    std::cout << "\tThis program emulates a Scanivalve MPS4200 series pressure scanner \n";
-    std::cout << "\tFor use in developing a client application for communicating with \n";
-    std::cout << "\tand receiving data from a pressure scanner. A TCP server is started \n";
-    std::cout << "\ton the speficied port (or default of 65432). Simulated scan data is \n";
-    std::cout << "\tis sent over a UDP socket by default\n";
+    std::cout << "\nFlags:\n";
+    std::cout << "  -h, --help        \tPrint help message and exit\n";
+    std::cout << "  -v, --version     \tPrint version number and exit\n";
+    std::cout << "  --enable-console  \tEnable embedded console\n";
+
+    std::cout << "\nOptions:\n";
+    std::cout << "  -t, --type <TYPE> \tMPS Type (default: 4264) [ ALLOWED: 4264 | 4232 | 4216 ]\n";
+    std::cout << "  -p, --port <PORT> \tTCP port (default: 23)\n";
+    std::cout << "  --bind-ip  <IP>   \tIP address to bind (default: 127.0.0.1)\n";
 }
 
 static Options ParseAguments(int argc, char** argv)
@@ -81,7 +94,7 @@ static Options ParseAguments(int argc, char** argv)
 
     if (has_option_flag(args, "-v") || has_option_flag(args, "--version"))
     {
-        std::cout << "Aiolos (c) MPS Server Emulator v" << VersionString << '\n';
+        std::cout << "Aiolos (c) MPS Server v" << VersionString << '\n';
         opts.should_close = true;
         return opts;
     }
@@ -91,6 +104,28 @@ static Options ParseAguments(int argc, char** argv)
         PrintHelp(argv[0]);
         opts.should_close = true;
         return opts;
+    }
+
+    if (has_option_flag(args, "-t"))
+    {
+        uint32_t device_type;
+        option_val = get_option_value(args, "-t");
+        
+        if(arg_to_num(option_val, device_type))
+            opts.device_type = device_type;
+        else
+            LOG_ERROR("Option flag -t must be followed by a numeric argument");
+    }
+
+    if (has_option_flag(args, "--type"))
+    {
+        uint32_t device_type;
+        option_val = get_option_value(args, "--type");
+        
+        if(arg_to_num(option_val, device_type))
+            opts.device_type = device_type;
+        else
+            LOG_ERROR("Option flag --type must be followed by a numeric argument");
     }
 
     if (has_option_flag(args, "-p"))
@@ -114,7 +149,13 @@ static Options ParseAguments(int argc, char** argv)
         else
             LOG_ERROR("Option flag --port must be followed by a numeric argument");
     }
-    opts.enable_console = !has_option_flag(args, "--disable-console");
+
+    if (has_option_flag(args, "--bind-ip"))
+    {
+        opts.bind_ip = get_option_value(args, "--bind-ip");
+    }
+
+    opts.enable_console = has_option_flag(args, "--enable-console");
     return opts;
 }
 
