@@ -10,9 +10,9 @@ The emulator starts a TCP server on the default port 23 that accepts connections
 ```
 | OPTIONS              | ARGUMENTS             | DESCRIPTION                                      |
 | -------------------- | --------------------- | ------------------------------------------------ |
-| `-h`, `--help`       |                       | Print help message and exit.                     |
+| `-h`, `--help`       |                       | Print help message and exit.                     |  
 | `-v`, `--version`    |                       | Print software version and exit.                 |
-| `--enable-console`   |                       | disable the local input console.                 |
+| `--enable-console`   |                       | Enable the local input console.                  |
 | `-t`, `--type`       |`<scanner-type>`       | MPS type. Allowed: 4216, 4232, 4264 (default)    |
 | `-p`, `--port`       |`<port-number>`        | listening port for the server. (default 23)      |
 | `--bind-ip`          |`<ip-address>`         | bound ip for the server. (127.0.0.1)             |
@@ -174,7 +174,7 @@ Consult the MPS manual for more detailed descriptions of each command, including
 
 1. Clone the repository
 ```powershell
-git clone https://github.com/csooriyakumaran/mps-emulator.git
+git clone --recursive-submodules https://github.com/csooriyakumaran/mps-emulator.git
 cd mps-emulator
 ```
 2. Generate build files for the target compiler
