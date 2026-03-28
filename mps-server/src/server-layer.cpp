@@ -284,7 +284,7 @@ bool ServerLayer::IsValidMsg(const std::string_view& msg) { return true; }
 void ServerLayer::OnCommand(uint64_t id, std::string_view cmd)
 {
 
-    if (m_Server && id != m_ActiveTCPCommandClientId)
+    if (m_Server && id != m_ActiveTCPCommandClientId && id != 0)
     {
         m_Server->SendString(id, "[Error] you do not have permission to control this device\r\n");
         return;
@@ -350,7 +350,10 @@ void ServerLayer::OnCommand(uint64_t id, std::string_view cmd)
     if (m_Device)
     {
         std::string response = m_Device->ParseCommands(tokens[0]);
-        m_Server->SendString(id, response);
+        if (id == 0)
+            std::cout << response << "\n";
+        else
+            m_Server->SendString(id, response);
     }
 
     // if (m_Scanners.find(id) != m_Scanners.end())
