@@ -67,7 +67,6 @@ void Server::Stop()
 
     m_ServerIsRunning = false;
 
-    m_Threads.StopAll();
 
     for (auto& [id, client] : m_Connections)
         KickClient(id);
@@ -77,6 +76,8 @@ void Server::Stop()
     CloseSocket(m_ServerSocket);
     CloseSocket(m_StreamSocket);
     CleanupNetworking();
+
+    m_Threads.StopAll();
 }
 
 void Server::AcceptConnectionThreadFn()
