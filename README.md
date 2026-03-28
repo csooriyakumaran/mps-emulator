@@ -122,7 +122,7 @@ To maintain compatibility with the ScanTel terminal emulator, which uses the Tel
 
 ### Commands and Syntax
 
-Below are listed the commands which must be sent as shown and temrinated with `<CR><LF>`. Argument parameters are shown inside `< >` and optional parameters are inclosed in `[ ]`.  The following exceptions to this are special characters:
+Below are listed the commands which must be sent as shown and temrinated with `<CR><LF>`. Argument parameters are shown inside `< >` and optional parameters are enclosed in `[ ]`.  The following exceptions to this are special characters:
 
 - `<BS>`: Backspace ( `0x08` )
 - `<TAB>`: Horizontal tab ( `0x09` )
@@ -159,14 +159,16 @@ Consult the MPS manual for more detailed descriptions of each command, including
 | ----------------------------------- | ------------------------------------- |
 | `LIST S`                            | Returns the scan settings             |
 | `LIST UDP`                          | Returns the UDP settings              |
+| `LIST M`                            | Returns the Misc. settings              |
 
 ***SET COMMANDS***
 
 | SYNTAX                              | DESCRIPTION                           |
 | ----------------------------------- | ------------------------------------- |
-| `SET RATE <RATE> [<OUTPUT RATE>]`   | Set the sampling and output rate of the scanner. <br> - `RATE` internal scan rate in Hz<br> - `OUTPUT RATE` rate at which data are sent. Defaults to `RATE` if ommitted. |
+| `SET RATE <RATE>`                   | Set the sampling rate in Hz of the scanner. If `RATE` is less than 500, the scanner averages internally.|
 | `SET ENUDP <OPT>`                   | `0`: Disable UDP<br>`1`: Enable UDP   |
-| `SET IPUDP <IP> <PORT>`             | Set the UPD target ip and port number (the ip address is actually handled automatically in the emulator based on the address of the client which issues the `scan` command, however a dummy ip address must still be specified)|
+| `SET IPUDP <IP> <PORT>`             | Set the UPD target ip and port number |
+| `SET SIM <VALUE>`                   | Set the Simulation variable in decimal or hex. <BR>`SET SIM 0x40` (i.e., 64) Simulate 64 Ch. Device with padded legacy format<BR> `SET SIM 0x04` **NOT IMPLEMENTED**|
 
 ## Building from Source
 
@@ -200,7 +202,7 @@ The `export-compile-commands` action requires the use of a custom premake module
 
 Compilation will depend on the selection of compiler. So far Visual studio 2022 and to a lesser extent gcc have been tested with the c++20 standard.
 
-Intermediate binaries (like object files) are genearted in the `./build/` directory, and the binaries will be added to the `./bin/` directory. Aerolib is compiled into a library that is statically linked into the mps-server executable. 
+Intermediate binaries (like object files) are generated in the `./build/` directory, and the binaries will be added to the `./bin/` directory. Aerolib is compiled into a library that is statically linked into the mps-server executable. 
 
 The executable is stand alone so can be freely copied or moved. TBD: eventually scanner configurations will be saved to files, mirroring the approach taken by the Scanivalve scanners.
 
@@ -245,14 +247,14 @@ This cleans both debug and release files.
 #### Make (gmake \| gmake2)
 
 ##### GNU on Windows
-For a Windows development enviroment that uses the gnu toolchain (e.g., [`MSYS2`](https://www.msys2.org/) or [`mingw`](https://www.mingw-w64.org/)), the premake action `gmake` or `gmake2` can be used (instead of `vs2022`). This will generate makefiles that can be compiled using the [`gnu make`](https://www.gnu.org/software/make/) executable. 
+For a Windows development environment that uses the gnu tool-chain (e.g., [`MSYS2`](https://www.msys2.org/) or [`mingw`](https://www.mingw-w64.org/)), the premake action `gmake` or `gmake2` can be used (instead of `vs2022`). This will generate makefiles that can be compiled using the [`gnu make`](https://www.gnu.org/software/make/) executable. 
 ```powershell
  scripts\setup.bat gmake
  make config=release
 ```
 
 ##### Linux
-Only limited testing has been done in a linux enviromenent using [`wsl`](https://learn.microsoft.com/en-us/windows/wsl/install). TCP communication seems to work fine but the sever does not respect the requested port number. UDP streaming is also not working. 
+Only limited testing has been done in a linux environment using [`wsl`](https://learn.microsoft.com/en-us/windows/wsl/install). TCP communication seems to work fine but the sever does not respect the requested port number. UDP streaming is also not working. 
 
 Download the appropriate pre-built [`premake`](https://premake.github.io/download/) binary for your OS. 
 
