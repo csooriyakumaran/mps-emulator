@@ -7,9 +7,27 @@
 #include <winsock2.h>
 #include <WS2tcpip.h>
 
+#include "aero/core/buffer.h"
 
 namespace aero
 {
+
+static void SwapToNetworkOrderInPlace(aero::Buffer& buf)
+{
+    uint8_t* data = static_cast<uint8_t*>(buf.data);
+    size_t size = buf.size;
+
+    if (size % 4 != 0)
+        return;
+
+    uint32_t* words = reinterpret_cast<uint32_t*>(data);
+    size_t count = size / 4;
+
+    for (size_t i = 0; i < count; ++i)
+        words[i] = htonl(words[i]);
+
+    return;
+}
 
 static inline uint32_t HostFloatToBE(float value)
 {
