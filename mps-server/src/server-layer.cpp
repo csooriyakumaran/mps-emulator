@@ -352,8 +352,7 @@ void ServerLayer::OnCommand(uint64_t id, std::string_view cmd)
         std::string response = m_Device->ParseCommands(tokens[0]);
         if (id == 0)
             std::cout << response << "\n";
-        else
-            m_Server->SendString(id, response);
+        m_Server->SendString(id, response);
     }
 
     // if (m_Scanners.find(id) != m_Scanners.end())
