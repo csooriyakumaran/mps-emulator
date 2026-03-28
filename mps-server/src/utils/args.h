@@ -14,10 +14,11 @@ namespace args
 
 struct Options
 {
-    uint16_t port       = 23;
-    std::string bind_ip = "127.0.0.1";
-    bool should_close   = false;
-    bool enable_console = true;
+    uint32_t device_type = 4264;
+    uint16_t port        = 23;
+    std::string bind_ip  = "127.0.0.1";
+    bool should_close    = false;
+    bool enable_console  = true;
 };
 
 static bool has_option_flag(const std::vector<std::string_view>& args, const std::string_view name)
@@ -66,6 +67,7 @@ static void PrintHelp(char* name)
     std::cout << "[--help] ";
     std::cout << "[--version] ";
     std::cout << "[--enable-console] ";
+    std::cout << "[--type <device-type>] ";
     std::cout << "[--port <port>] ";
     std::cout << "[--bind-ip <ip>] ";
     std::cout << "\n\n";
@@ -78,8 +80,9 @@ static void PrintHelp(char* name)
     std::cout << "  --enable-console  \tEnable embedded console\n";
 
     std::cout << "\nOptions:\n";
-    std::cout << "  -p, --port <PORT> \tTCP port (default 23)\n";
-    std::cout << "  --bind-ip  <IP>   \tIP address to bind (default 127.0.0.1)\n";
+    std::cout << "  -t, --type <TYPE> \tMPS Type (default: 4264) [ ALLOWED: 4264 | 4232 | 4216 ]\n";
+    std::cout << "  -p, --port <PORT> \tTCP port (default: 23)\n";
+    std::cout << "  --bind-ip  <IP>   \tIP address to bind (default: 127.0.0.1)\n";
 }
 
 static Options ParseAguments(int argc, char** argv)
@@ -101,6 +104,28 @@ static Options ParseAguments(int argc, char** argv)
         PrintHelp(argv[0]);
         opts.should_close = true;
         return opts;
+    }
+
+    if (has_option_flag(args, "-t"))
+    {
+        uint32_t device_type;
+        option_val = get_option_value(args, "-t");
+        
+        if(arg_to_num(option_val, device_type))
+            opts.device_type = device_type;
+        else
+            LOG_ERROR("Option flag -t must be followed by a numeric argument");
+    }
+
+    if (has_option_flag(args, "--type"))
+    {
+        uint32_t device_type;
+        option_val = get_option_value(args, "--type");
+        
+        if(arg_to_num(option_val, device_type))
+            opts.device_type = device_type;
+        else
+            LOG_ERROR("Option flag --type must be followed by a numeric argument");
     }
 
     if (has_option_flag(args, "-p"))
