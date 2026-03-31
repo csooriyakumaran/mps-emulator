@@ -116,7 +116,7 @@ void ServerLayer::OnUpdate()
     if (!m_TCPBinaryServer->IsRunning())
         m_TCPBinaryServer->Start();
 
-    LOG_DEBUG_TAG("MPS-EMULATOR", "Running at {:8.2f} fps", aero::Application::Get().FrameRate());
+    // LOG_DEBUG_TAG("MPS-EMULATOR", "Running at {:8.2f} fps", aero::Application::Get().FrameRate());
 }
 // ---- D E V I C E - C A L L B A C K -------------------------------------
 
