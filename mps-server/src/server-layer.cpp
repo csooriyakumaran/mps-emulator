@@ -27,7 +27,7 @@ void ServerLayer::OnAttach()
     cfg.serial_number   = aero::extract_last_octet(m_BindIp);
     cfg.telnet_format   = MPS_FMT_ASCII;
     cfg.ftp_udp_format  = MPS_FMT_BINARY;
-    cfg.binary_format   = MPS_FMT_LABVIEW;
+    cfg.binary_format   = MPS_FMT_BINARY;
     cfg.scan_rate_hz    = 10;
     cfg.frames_per_scan = 0;
     cfg.units           = MPS_UNITS_PA;
@@ -214,7 +214,7 @@ void ServerLayer::OnDataReceived(uint64_t id, aero::Buffer buf)
 {
 
     std::string_view cmd(buf.As<char>(), buf.size);
-    LOG_DEBUG_TAG("MPS-EMULATOR", "Data revieced from client `{}`", cmd);
+    LOG_DEBUG_TAG("MPS-EMULATOR", "Data revieced from client on port 23: `{}`", cmd);
 
     // validate input
     if (!IsValidMsg(cmd))
@@ -269,6 +269,7 @@ void ServerLayer::OnTCPBinaryDataReceived(uint64_t id, aero::Buffer buf)
     if (buf.size >= 1)
     {
         uint8_t val = *buf.As<uint8_t>();
+        LOG_DEBUG_TAG("MPS-EMULATOR", "Data recieved on port 503: `{}`", val);
         if (val == 1)
             m_Device->StartScan();
         if (val == 0)

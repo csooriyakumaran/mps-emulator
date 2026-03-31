@@ -8,10 +8,7 @@
 #include <string_view>
 
 #include "aero/core/log.h"
-#include "aero/networking/utils.h"
 
-// #include "scanivalve/mps-config.h"
-// #include "scanivalve/mps-data.h"
 #include "utils/string-utils.h"
 #include "version.h"
 
@@ -26,8 +23,6 @@ mps::Mps::Mps(const MpsConfig& cfg, FrameCallback on_frame, FrameCallback on_lab
       m_OnLabviewFrame(on_labview),
       m_OnStatusChanged(on_status_changed)
 {
-    std::size_t seed = std::hash<std::string>{}(m_Name);
-    m_RandomGenerator.seed(static_cast<uint32_t>(seed));
     m_NormalDistribution = std::normal_distribution<double>(0.0, 0.0005 * static_cast<double>(MPS_MAX_ADC_COUNTS) );
 }
 
@@ -202,12 +197,17 @@ void mps::Mps::StartScan()
     if (m_Scanning)
         return;
 
+    // - re-seed randomom number generator to ensur repeatable data for testing
+    std::size_t seed = std::hash<std::string>{}(m_Name);
+    m_RandomGenerator.seed(static_cast<uint32_t>(seed));
 
     m_ScanStartTimePTP = std::chrono::system_clock::now();
     m_ScanStartTime    = std::chrono::steady_clock::now();
 
     auto secs_since_epoch = std::chrono::time_point_cast<std::chrono::seconds>(m_ScanStartTimePTP);
-    auto ns_since_epoch = std::chrono::time_point_cast<std::chrono::nanoseconds>(m_ScanStartTimePTP);
+    auto ns_since_epoch   = std::chrono::time_point_cast<std::chrono::nanoseconds>(m_ScanStartTimePTP);
+    auto ms_since_epoch   = std::chrono::duration_cast<std::chrono::milliseconds>(m_ScanStartTimePTP.time_since_epoch());
+    auto ms_fraction      = ms_since_epoch % 1000;
 
     m_ScanStartTimePTPSeconds     = static_cast<uint32_t>(secs_since_epoch.time_since_epoch().count());
     m_ScanStartTimePTPNanoseconds = static_cast<uint32_t>((ns_since_epoch - secs_since_epoch).count());
@@ -222,21 +222,20 @@ void mps::Mps::StartScan()
    if (m_OnStatusChanged)
         m_OnStatusChanged();
 
-//     std::time_t tt = std::chrono::system_clock::to_time_t(m_ScanStartTimePTP);
-//     auto frac = std::chrono::duration_cast<std::chrono::milliseconds>(m_ScanStartTimePTP - );
-//     std::tm tm;
-// #ifdef PLATFORM_WINDOWS
-//     localtime_s(&tm, &tt);
-// #else
-//     localtime_r(&tt, &tm)
-// #endif // PLATFORM_WINDOWS
-//
-//     char buf[64];
-//     std::strftime(buf, sizeof(buf), "%Y-%m-%d %H:%M:%S", &tm);
-//
-//     char full[80];
-//     std::snprintf(full, sizeof(full), "%s.%03lld", buf, static_cast<long long>(frac.count()));
-//     LOG_INFO_TAG(m_Name, "Scan Started at {}", full);
+    std::time_t tt = std::chrono::system_clock::to_time_t(m_ScanStartTimePTP);
+    std::tm tm;
+#ifdef PLATFORM_WINDOWS
+    localtime_s(&tm, &tt);
+#else
+    localtime_r(&tt, &tm)
+#endif // PLATFORM_WINDOWS
+
+    char buf[64];
+    std::strftime(buf, sizeof(buf), "%Y-%m-%d %H:%M:%S", &tm);
+
+    char full[80];
+    std::snprintf(full, sizeof(full), "%s.%03lld", buf, static_cast<long long>(ms_fraction.count()));
+    LOG_INFO_TAG(m_Name, "Scan Started at {}", full);
 
 }
 
