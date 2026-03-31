@@ -67,9 +67,6 @@ void mps::Mps::ConfigureScanLayout()
 
     const mps::MpsConfig& cfg = GetConfig();
 
-
-    // - interpet the config to set some scan flags
-
     // - Labview format requested on TCP Binary Server
     m_UseLabview = (cfg.binary_format == MPS_FMT_LABVIEW);
 
@@ -236,7 +233,6 @@ void mps::Mps::StartScan()
     char full[80];
     std::snprintf(full, sizeof(full), "%s.%03lld", buf, static_cast<long long>(ms_fraction.count()));
     LOG_INFO_TAG(m_Name, "Scan Started at {}", full);
-
 }
 
 void mps::Mps::StopScan()
