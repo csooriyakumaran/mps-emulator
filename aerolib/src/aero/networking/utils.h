@@ -6,11 +6,48 @@
 #include <cstring>
 #include <winsock2.h>
 #include <WS2tcpip.h>
+#include <span>
 
 #include "aero/core/buffer.h"
 
 namespace aero
 {
+
+static inline void HexDump(const aero::Buffer& buf)
+{
+        auto data = std::span<const uint8_t>(buf.As<uint8_t>(), buf.size);
+
+        size_t width = 16;
+
+        for (size_t i = 0; i < data.size(); i+=width)
+        {
+            // hex
+            for (size_t j = 0; j < width; ++j)
+            {
+                if (i + j < data.size())
+                {
+                    auto v = data[i+j];
+                printf("%02X ", v);
+                if ((i+1) % 16 == 0)
+                    printf("\n");
+                }
+                else
+                {
+                    printf("    ");
+                }
+            }
+
+            printf(" | ");
+
+            // ascii
+            for (size_t j = 0; j < width && i + j < data.size(); ++j)
+            {
+                auto v = data[i+j];
+                printf("%c", std::isprint(v) ? v : '.');
+            }
+            printf("\n");
+        }
+}
 
 static void SwapToNetworkOrderInPlace(aero::Buffer& buf)
 {
