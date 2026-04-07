@@ -32,7 +32,7 @@ void mps::Mps::Start()
 {
     m_Running = true;
     m_ThreadPool.Enqueue([this]() { this->ScanThreadFn(); }, "Scanning Thread");
-    LOG_INFO_TAG(m_Name, "Starting Virtual Scanner: Emulating firmware v{}", MPS_VERSION_STRING);
+    LOG_INFO_TAG(m_Name, "Starting Virtual Scanner: Emulating firmware v{}", MPS_FIRMWARE_VERSION_STRING);
 }
 
 void mps::Mps::Shutdown()
@@ -531,7 +531,7 @@ std::string mps::Mps::ParseCommands(std::string cmd)
     std::vector<std::string> tokens = utils::SplitString(cmd, " \r\n");
 
     if (tokens[0] == "VER" || tokens[0] == "ver" || tokens[0] == "VERSION" || tokens[0] == "version")
-        return std::string("Aiolos (c) MPS Server v") + VersionString + ": Emulating Scanivalve Firmware v" + MPS_VERSION_STRING + "\r\n>";
+        return std::string("Aiolos (c) MPS Server v") + VersionString + ": Emulating Scanivalve Firmware v" + MPS_FIRMWARE_VERSION_STRING + "\r\n>";
     // return "Aiolos (c) MPS Server Emulator v.2024.0\r\n>";
 
     if (tokens[0] == "STATUS" || tokens[0] == "status")
