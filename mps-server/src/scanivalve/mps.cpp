@@ -81,6 +81,7 @@ void mps::Mps::ConfigureScanLayout()
 
     // - reset the packet info struct pointer
     m_PacketInfo = nullptr;
+    m_PacketType = MPS_PKT_UNDEFINED;
 
     // - determine the number of physical channels (i.e., what we use to generate the data)
     switch (cfg.device_id)
@@ -135,9 +136,15 @@ void mps::Mps::ConfigureScanLayout()
 
     }
 
-    LOG_INFO(
-        "Labview = {}, Binary = {}, Zero-pad {}, Raw = {}, PacketType = {:X}",
-        (int)m_UseLabview, (int)m_UseBinary, (int)m_ZeroPad,  (int)m_UseRaw, (uint16_t)m_PacketType
+    LOG_INFO_TAG(
+        m_Name,
+        "Format F {}, B {}, SIM 0x{:02X}, Units {}, Type 0x{:02X} ({} bytes)",
+        ::mps_format_to_char(cfg.ftp_udp_format),
+        ::mps_format_to_char(cfg.binary_format),
+        (uint8_t)cfg.sim,
+        ::mps_units_to_string(cfg.units),
+        (uint8_t)m_PacketType,
+        ::mps_packet_size_from_type(m_PacketType) ? ::mps_packet_size_from_type(m_PacketType) : ::mps_labview_packet_size(m_PacketPressureChannelCount)
     );
 
 

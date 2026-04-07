@@ -1,3 +1,5 @@
+#include <span>
+
 #include "server-layer.h"
 
 #include "aero/core/application.h"
@@ -5,6 +7,9 @@
 #include "aero/networking/utils.h"
 
 #include "utils/string-utils.h"
+
+typedef uint8_t u8;
+typedef uint64_t u64;
 
 //- Initialize members
 ServerLayer::ServerLayer(uint32_t id, std::string ip, uint16_t port, bool enable_console)
