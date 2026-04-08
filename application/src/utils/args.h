@@ -94,7 +94,7 @@ static Options ParseAguments(int argc, char** argv)
 
     if (has_option_flag(args, "-v") || has_option_flag(args, "--version"))
     {
-        std::cout << "Aiolos (c) MPS Server v" << VersionString << '\n';
+        std::cout << "Aiolos (c) MPS Server v" << MPS_EMULATOR_VERSION_STRING << '\n';
         opts.should_close = true;
         return opts;
     }
