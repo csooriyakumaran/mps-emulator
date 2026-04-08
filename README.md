@@ -6,7 +6,7 @@ The emulator starts a TCP server on the default port 23 that accepts connections
 
 ## USAGE
 ```powershell
- mps-server.exe [<OPTIONS>] [<ARGUMENTS>]
+ mps-emulator.exe [<OPTIONS>] [<ARGUMENTS>]
 ```
 | OPTIONS              | ARGUMENTS             | DESCRIPTION                                      |
 | -------------------- | --------------------- | ------------------------------------------------ |
@@ -15,11 +15,11 @@ The emulator starts a TCP server on the default port 23 that accepts connections
 | `--enable-console`   |                       | Enable the local input console.                  |
 | `-t`, `--type`       |`<scanner-type>`       | MPS type. Allowed: 4216, 4232, 4264 (default)    |
 | `-p`, `--port`       |`<port-number>`        | listening port for the server. (default 23)      |
-| `--bind-ip`          |`<ip-address>`         | bound ip for the server. (127.0.0.1)             |
+| `--bind-ip`          |`<ip-address>`         | bound ip for the server. (default 127.0.0.1)     |
 
 e.g.:
 ```powershell
- mps-server.exe --type 4216 --bind-ip 127.0.0.101 --port 23 
+ mps-emulator.exe --type 4216 --bind-ip 127.0.0.101 --port 23 
 ```
 
 Once running, connect to the server as any other scanner. 
@@ -31,7 +31,7 @@ Launch many instances of this application, each with unique IP addresses in the 
 ```powershell
 
 # starts server with vitural device type MPS-4264 on ip 127.0.0.12:23
-mps-server.exe --type 4264 --bind-ip 127.0.0.12 --port 23
+mps-emulator.exe --type 4264 --bind-ip 127.0.0.12 --port 23
 
 ```
 
@@ -114,9 +114,9 @@ Commands can be sent to the server from clients (or the console if prefixed by `
 
 e.g.:
 ```console
-> "SET RATE 850 10\r\n"
+> SET RATE 100\r\n
 ```
-will send the command `SET RATE` with the arguments `850` and `10`
+will send the command `SET RATE` with the arguments `100` setting the sampling rate to 100 Hz.
 
 To maintain compatibility with the ScanTel terminal emulator, which uses the TelNet protocol, the server accepts commands that are issued one character at a time (including backspaces to remove characters) until a carriage return is sent. 
 
@@ -172,106 +172,65 @@ Consult the MPS manual for more detailed descriptions of each command, including
 
 ## Building from Source
 
-### Generating project files
+#### Requires
 
-1. Clone the repository
+- [git](https://git-scm.com/)
+- [CMake](https://cmake.org/)
+- C++ compiler (clang++, MSVC, etc.)
+
+#### Clone repo
 ```powershell
-git clone --recursive-submodules https://github.com/csooriyakumaran/mps-emulator.git
+git clone https://github.com/csooriyakumaran/mps-emulator.git
 cd mps-emulator
 ```
-2. Generate build files for the target compiler
+
+
+#### MSVC Multi-configuration
+
+From the project root:
+
 ```powershell
-scripts/setup.bat [ACTION]
+# configure
+cmake -S . -B build -G "Visual Studio 17 2022" -A x64
+
+# build
+cmake --build <build-dir> --config <Debug|Release>
+#e.g.
+cmake --build build --config Release
+
+# to install in a different locaton
+cmake --install build --config <Debug|Release> --prefix <path-to-install-dir>
 ```
-e.g:
+
+#### Ninja + Clang
+Ninja is a single configuration build, so the project must be configured separately for debug/release builds. Alternatively, specify separate build directories for each configuration (as shown below)
+
 ```powershell
-scripts/setup.bat vs2022
+# Debug
+cmake -S . -B build-debug -G "Ninja" -D CMAKE_BUILD_CONFIG=Debug
+cmake --build build-debug
+
+# Release
+cmake -S . -B build-release -G "Ninja" -D CMAKE_BUILD_CONFIG=Release
+cmake --build build-release
+
+# to install elsewhere
+cmake --install build-release --prefix <path-to-install-dir>
+
 ```
-This will generate a vs2022 solution file in the root, and project files in each project directory (e.g., mps-server/mps-server.vcsproj). The build system is [`premake`](https://premake.github.io/), since I couldn't be bothered to learn CMake. The premake binary is included in `./build-tools/premake/` along with the license. To list the all supported compiler targets and premake actions run the `scritp/setup.bat` file with no arguments, or consult the premake [`docs`](https://premake.github.io/docs/). The following should be all that is needed for this project. 
 
-| ACTION                   |  DESCRIPTION                                                      |
-| ------------------------ | ----------------------------------------------------------------- |
-| `vs2022`                 | - generates visual studio solution and project files              |
-| `gmake`                  | - generates gnu Makefiles for the gcc compiler (i.e., if on linux) **NOT FULLY TESTED**|
-| `clean`                  | - removes project files as well as compiled binaries              |
-| `export-compile-commands`| - generates compile_commands.json files for each build config     |
 
-The `export-compile-commands` action requires the use of a custom premake module. See [`tarruda/premake-export-compile-commads`](https://github.com/tarruda/premake-export-compile-commands) for more details. This is only useful when using an IDE/editor that requires an external lsp client (specifically [`clangd`](https://clangd.llvm.org/)) to serve language features like auto-completion, go-to-definitions, etc. 
+#### Cleaning
 
-### Building the project
-
-Compilation will depend on the selection of compiler. So far Visual studio 2022 and to a lesser extent gcc have been tested with the c++20 standard.
-
-Intermediate binaries (like object files) are generated in the `./build/` directory, and the binaries will be added to the `./bin/` directory. Aerolib is compiled into a library that is statically linked into the mps-server executable. 
-
-The executable is stand alone so can be freely copied or moved. TBD: eventually scanner configurations will be saved to files, mirroring the approach taken by the Scanivalve scanners.
-
-#### Visual Studio (vs2022)
-
-Generate the Visual Studio solution and prject files.
+To clean the built binaries:
 ```powershell
-scripts/setup.bat vs2022
+cmake --build <build-dir> --target clean
 ```
-Open the Visual Studio solution file and build/run the desired configuration from there. 
 
-#### MSBuild (vs2022)
-
-Generate the Visual Studio solution and prject files.
+For a complete cleanup, simply delete the build directory:
 ```powershell
-scripts/setup.bat vs2022
+rmdir /s /q <build-dir>
 ```
-If msbuild is installed on your system and in your system path, run the msbuild batch file from the root directory. 
-```powershell
-scripts/msbuild.bat [CONFIGURTION] [COMMAND]
-```
-| CONFIGURATION            | DESCRIPTION                                                   |
-| ------------------------ | ------------------------------------------------------------- |
-| `release`                | Compiles without debug symbols and O2 optimization            |
-| `debug`                  | Compiles with debug symbols and no optimization               |
-
-| COMMANDS                 |                                                               |
-| ------------------------ | ------------------------------------------------------------- |
-| `run`                    | - runs the target config executable after compilation         |
-| `clean`                  | - removes compiled and intermediate binaries                  |
-
-e.g.:
-```powershell
- scripts/msbuild.bat release run
-```
-Intermediate and binary file can be removed by removing the .\bin\ and .\biuld\ directories, or by running
-```powershell
- scripts/msbuild.bat clean
-```
-This cleans both debug and release files. 
-
-#### Make (gmake \| gmake2)
-
-##### GNU on Windows
-For a Windows development environment that uses the gnu tool-chain (e.g., [`MSYS2`](https://www.msys2.org/) or [`mingw`](https://www.mingw-w64.org/)), the premake action `gmake` or `gmake2` can be used (instead of `vs2022`). This will generate makefiles that can be compiled using the [`gnu make`](https://www.gnu.org/software/make/) executable. 
-```powershell
- scripts\setup.bat gmake
- make config=release
-```
-
-##### Linux
-Only limited testing has been done in a linux environment using [`wsl`](https://learn.microsoft.com/en-us/windows/wsl/install). TCP communication seems to work fine but the sever does not respect the requested port number. UDP streaming is also not working. 
-
-Download the appropriate pre-built [`premake`](https://premake.github.io/download/) binary for your OS. 
-
-Generate the Makefiles, build, and run. 
-```sh
- ./path-to-premake-for-linux/premake5 --file=build-project.lua gmake
- make config=release
- ./bin/Release-linux-x86_64/mps-server/mps-server --disable-console --port 5888
-```
-
-### Cleaning
-
-The project and solution files can be removed by running
-```powershell
- scripts\setup.bat clean
-```
-This will also remove compiled binaries. 
 
 
 ## TODO 
