@@ -73,7 +73,16 @@ if (WIN32)
     target_link_libraries(mps-emulator PRIVATE ws2_32)
 endif()
 
-install(TARGETS mps-emulator RUNTIME DESTINATION .)
+# === Install Rules ===
+install(TARGETS mps-emulator
+    RUNTIME DESTINATION bin
+    COMPONENT Runtime
+)
+
+install(FILES README.md LICENSE
+    DESTINATION .
+    COMPONENT Docs
+)
 
 
 

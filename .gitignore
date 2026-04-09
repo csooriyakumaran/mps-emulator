@@ -57,5 +57,6 @@ compile_commands/
 **/__pycache__/
 
 releases
+stage
 
 !build-tools/premake/*

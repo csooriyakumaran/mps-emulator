@@ -5,7 +5,7 @@ An emulated MPS-42xx pressure scanner.
 The emulator starts a TCP server on the default port 23 that accepts connections from a single client, and handles commands following the [Scanivalve MPS Protocol](https://github.com/csooriyakumaran/scanivalve-mps-protocol) as defined in the [Scanivavle Hardware, Software, and User Manual](https://scanivalve.com/wp-content/uploads/2026/03/MPS4200_v401_260304.pdf).
 
 ## USAGE
-```powershell
+```shell
  mps-emulator.exe [<OPTIONS>] [<ARGUMENTS>]
 ```
 | OPTIONS              | ARGUMENTS             | DESCRIPTION                                      |
@@ -18,7 +18,7 @@ The emulator starts a TCP server on the default port 23 that accepts connections
 | `--bind-ip`          |`<ip-address>`         | bound ip for the server. (default 127.0.0.1)     |
 
 e.g.:
-```powershell
+```shell
  mps-emulator.exe --type 4216 --bind-ip 127.0.0.101 --port 23 
 ```
 
@@ -28,7 +28,7 @@ Launch many instances of this application, each with unique IP addresses in the 
 
 ### Controlling to the Emulator
 
-```powershell
+```shell
 
 # starts server with vitural device type MPS-4264 on ip 127.0.0.12:23
 mps-emulator.exe --type 4264 --bind-ip 127.0.0.12 --port 23
@@ -37,7 +37,7 @@ mps-emulator.exe --type 4264 --bind-ip 127.0.0.12 --port 23
 
 Connections made over TCP/Telnet on port 23 will be granted full command/control
 
-```powershell
+```shell
 telnet 127.0.0.12 23
 > LIST S
 SET RATE 10
@@ -56,7 +56,7 @@ SET ENFTP 0
 
 UDP data transfer can be enabled using the `ENUDP` command as well as setting the UDP target destinations with the `SET IP UDP <IP> <PORT>` command. This corresponds to the IP and port of the listening UDP client.
 
-```powershell
+```shell
 > LIST UDP
 SET ENUDP 0
 SET IPUDP 127.0.0.1 23
@@ -66,7 +66,7 @@ SET ENDUP 1
 
 Data format is controlled using the `SET FORMAT F` command. The only acceptable format is `B`
 
-```powershell
+```shell
 > SET FORMAT F B
 SET FORMAT F B
 ```
@@ -76,14 +76,14 @@ SET FORMAT F B
 
 Like the physical devices, the virtual device emulates the TCP Binary Server on port 503. Data sent to this destination will follow the format set by:
 
-```powershell
+```shell
 > SET FORMAT B B
 SET FORMAT B B
 ```
 
 Or for the Labview binary data format:
 
-```powershell
+```shell
 > SET FORMAT B L
 SET FORMAT B L
 ```
@@ -179,7 +179,7 @@ Consult the MPS manual for more detailed descriptions of each command, including
 - C++ compiler (clang++, MSVC, etc.)
 
 #### Clone repo
-```powershell
+```shell
 git clone https://github.com/csooriyakumaran/mps-emulator.git
 cd mps-emulator
 ```
@@ -189,7 +189,7 @@ cd mps-emulator
 
 From the project root:
 
-```powershell
+```shell
 # configure
 cmake -S . -B build -G "Visual Studio 17 2022" -A x64
 
@@ -198,37 +198,53 @@ cmake --build <build-dir> --config <Debug|Release>
 #e.g.
 cmake --build build --config Release
 
-# to install in a different locaton
-cmake --install build --config <Debug|Release> --prefix <path-to-install-dir>
+# package for release, e.g., 
+cmake --install build --config Release --prefix stage/v0.2.0
 ```
+
+This yields:
+```text
+stage/
+|   v0.2.0/
+|   |   bin/
+|   |   |   mps-eumulator.exe
+|   |   LICENSE
+|   |   README.md
+    
+```
+Which can be zipped, and released on GitHub
 
 #### Ninja + Clang
 Ninja is a single configuration build, so the project must be configured separately for debug/release builds. Alternatively, specify separate build directories for each configuration (as shown below)
 
-```powershell
+```shell
 # Debug
-cmake -S . -B build-debug -G "Ninja" -D CMAKE_BUILD_CONFIG=Debug
+cmake -S . -B build-debug -G "Ninja" -DCMAKE_BUILD_CONFIG=Debug
 cmake --build build-debug
 
 # Release
-cmake -S . -B build-release -G "Ninja" -D CMAKE_BUILD_CONFIG=Release
+cmake -S . -B build-release -G "Ninja" -DCMAKE_BUILD_CONFIG=Release
 cmake --build build-release
 
-# to install elsewhere
-cmake --install build-release --prefix <path-to-install-dir>
+# to package for release
+cmake --install build-release --prefix stage/v0.2.0
 
+# to locally install the binary only
+cmake --install build-release --prefix <path> --component Runtime
 ```
+
+This adds the executable to `<path>/bin/mps-emulator.exe`. 
 
 
 #### Cleaning
 
 To clean the built binaries:
-```powershell
+```shell
 cmake --build <build-dir> --target clean
 ```
 
 For a complete cleanup, simply delete the build directory:
-```powershell
+```shell
 rmdir /s /q <build-dir>
 ```
 
