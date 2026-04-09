@@ -8,6 +8,8 @@
 #include <vector>
 
 #include "version.h"
+#include "scanivalve/mps-protocol.h"
+#include "scanivalve/mps-protocol-version.h"
 
 namespace args
 {
@@ -94,7 +96,9 @@ static Options ParseAguments(int argc, char** argv)
 
     if (has_option_flag(args, "-v") || has_option_flag(args, "--version"))
     {
-        std::cout << "Aiolos (c) MPS Server v" << VersionString << '\n';
+        std::cout << "Aiolos (c) MPS Emulator v" << MPS_EMULATOR_VERSION_STRING << '\n';
+        std::cout << "  - Scanivalve Protocol: v" << MPS_PROTOCOL_VERSION_STRING << '\n';
+        std::cout << "  - Scanivalve Firmware: v" << MPS_FIRMWARE_VERSION_STRING << '\n';
         opts.should_close = true;
         return opts;
     }

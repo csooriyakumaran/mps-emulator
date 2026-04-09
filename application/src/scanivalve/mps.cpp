@@ -484,6 +484,8 @@ void mps::Mps::ScanThreadFn()
                         packet_size = m_PacketInfo ? m_PacketInfo->size_bytes : sizeof(Mps64RawPacket);
                         break;
                     }
+                    case MPS_PKT_UNDEFINED:
+                        break;
 
                 }
 
@@ -531,7 +533,7 @@ std::string mps::Mps::ParseCommands(std::string cmd)
     std::vector<std::string> tokens = utils::SplitString(cmd, " \r\n");
 
     if (tokens[0] == "VER" || tokens[0] == "ver" || tokens[0] == "VERSION" || tokens[0] == "version")
-        return std::string("Aiolos (c) MPS Server v") + VersionString + ": Emulating Scanivalve Firmware v" + MPS_FIRMWARE_VERSION_STRING + "\r\n>";
+        return std::string("Aiolos (c) MPS Emulator v") + MPS_EMULATOR_VERSION_STRING + ": Emulating Scanivalve Firmware v" + MPS_FIRMWARE_VERSION_STRING + "\r\n>";
     // return "Aiolos (c) MPS Server Emulator v.2024.0\r\n>";
 
     if (tokens[0] == "STATUS" || tokens[0] == "status")

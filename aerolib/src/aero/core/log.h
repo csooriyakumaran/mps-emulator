@@ -38,8 +38,8 @@ static void PrintAssertMsg(std::string_view tag, std::string_view fmt="", Args&&
     #define LOG_DEBUG(fmt, ...) ::aero::Log::PrintMsg(::aero::Log::Level::Debug, fmt,  "", ##__VA_ARGS__)
     #define LOG_DEBUG_TAG(tag, fmt, ...) ::aero::Log::PrintMsg(::aero::Log::Level::Debug, fmt, tag, ##__VA_ARGS__)
 #else
-    #define LOG_DEBUG
-    #define LOG_DEBUG_TAG
+    #define LOG_DEBUG(...)     do { } while(0)
+    #define LOG_DEBUG_TAG(...) do { } while(0)
 #endif // DEBUG
 
 #define LOG_INFO(fmt, ...) ::aero::Log::PrintMsg(::aero::Log::Level::Info, fmt, "", ##__VA_ARGS__)
