@@ -4,6 +4,7 @@ An emulated MPS-42xx pressure scanner.
 
 The emulator starts a TCP server on the default port 23 that accepts connections from a single client, and handles commands following the [Scanivalve MPS Protocol](https://github.com/csooriyakumaran/scanivalve-mps-protocol) as defined in the [Scanivavle Hardware, Software, and User Manual](https://scanivalve.com/wp-content/uploads/2026/03/MPS4200_v401_260304.pdf).
 
+---
 ## USAGE
 ```bash
  mps-emulator.exe [<OPTIONS>] [<ARGUMENTS>]
@@ -13,9 +14,9 @@ The emulator starts a TCP server on the default port 23 that accepts connections
 | `-h`, `--help`       |                       | Print help message and exit.                     |  
 | `-v`, `--version`    |                       | Print software version and exit.                 |
 | `--enable-console`   |                       | Enable the local input console.                  |
-| `-t`, `--type`       |`<scanner-type>`       | MPS type. Allowed: 4216, 4232, 4264 (default)    |
-| `-p`, `--port`       |`<port-number>`        | listening port for the server. (default 23)      |
-| `--bind-ip`          |`<ip-address>`         | bound ip for the server. (default 127.0.0.1)     |
+| `-t`, `--type`       |`<scanner-type>`       | MPS device type.<br> Allowed: `4216`, `4232`, `4264` (default)    |
+| `-p`, `--port`       |`<port-number>`        | listening port for the server. (default `23`)      |
+| `--bind-ip`          |`<ip-address>`         | bound ip for the server. (default `127.0.0.1`)     |
 
 e.g.:
 ```bash
@@ -29,10 +30,8 @@ Launch many instances of this application, each with unique IP addresses in the 
 ### Controlling to the Emulator
 
 ```bash
-
 # starts server with vitural device type MPS-4264 on ip 127.0.0.12:23
 mps-emulator.exe --type 4264 --bind-ip 127.0.0.12 --port 23
-
 ```
 
 Connections made over TCP/Telnet on port 23 will be granted full command/control
@@ -47,8 +46,8 @@ SET FORMAT T A, F B, B B
 SET TRIG 0
 SET ENFTP 0
 > 
-
 ```
+> [!IMPORTANT] Connections are exclusively single-client. New connections will kick the existing client! (Last-one-wins)
 
 ### Receiving Data
 
@@ -101,13 +100,6 @@ If enabled with the `--enable-console` flag, a local console runs on a separate 
 For testing, scanner commands can be issued directly from the server console by prefixing the normal MPS commands with a `/` (e.g. `/set fps 300`), although in the debug configuration build, the number of logging statements that are printed makes this somewhat annoying. Commands issued via the console will have their output echoed to all connected clients. Scan requests made from the console will result in data being streamed to all listening clients.
 
 Because the console waits for user input, it will hang on reboot/shutdown until user input is written to `stdin`. Consequently, when not testing with the console it is better to not set the `--enable-console` flag so that the server can be remotely restarted with the `reboot` or `restart` command, or stopped with the `shutdown` command. 
-
-## Data Generation
-
-Scan data are generated pseudo-randomly following a normal distribution with a fixed standard deviation. At the beginning of each scan, the random number generator is seeded with a hash of the device type and serial number (which is generated from the IP address of the server). Consequently, every scan from the same virtual device instance produces the same sequence of numbers. The virtual device produces random samples as if it were a 24bit ADC with a physical range of +/- 1 psi. The standard deviation of the randomly generated data corresponds to 0.05% of the full scale range.
-
-> [!IMPORTANT] 
-> The repeatability of the rng sequence may be platform/compiler dependant, so may not be guaranteed. 
 
 ### Command Formatting
 
@@ -181,8 +173,16 @@ The emulator accepts basic commands on TCP port 503
 | `0`                                 | (e.g., the integer 0) Stop a scan     |
 
 
-## Building from Source
+---
+## DATA GENERATION
 
+Scan data are generated pseudo-randomly following a normal distribution with a fixed standard deviation. At the beginning of each scan, the random number generator is seeded with a hash of the device type and serial number (which is generated from the IP address of the server). Consequently, every scan from the same virtual device instance produces the same sequence of numbers. The virtual device produces random samples as if it were a 24bit ADC with a physical range of +/- 1 psi. The standard deviation of the randomly generated data corresponds to 0.05% of the full scale range.
+
+> [!IMPORTANT] 
+> The repeatability of the rng sequence may be platform/compiler dependant, so may not be guaranteed. 
+
+---
+## BUILDING FROM SOURCE
 ***REQUIRES***
 
 1. [git](https://git-scm.com/)
@@ -212,7 +212,7 @@ git clone https://github.com/csooriyakumaran/mps-emulator.git
 cd mps-emulator
 ```
 
-#### MSVC Multi-configuration
+### MSVC Multi-configuration
 From the project root:
 
 ```bash
@@ -223,7 +223,7 @@ cmake -S . -B build -G "Visual Studio 17 2022" -A x64
 cmake --build build --config Release
 ```
 
-#### Ninja + Clang
+### Ninja + Clang
 Ninja is a single configuration build, so the project must be configured separately for debug/release builds. Alternatively, specify separate build directories for each configuration (as shown below)
 
 ```bash
@@ -237,7 +237,7 @@ cmake --build build-release
 ```
 
 
-#### Installing / Packaging
+### Installing / Packaging
 
 After configuring and building, the application can be packaged for release or installed locally
 
@@ -279,7 +279,7 @@ cmake --install build --prefix <path> --component Runtime
 
 This adds the executable to `<path>/bin/mps-emulator.exe`. 
 
-#### Cleaning
+### Cleaning
 
 To clean the built binaries:
 ```bash
