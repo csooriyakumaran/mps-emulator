@@ -48,7 +48,8 @@ SET ENFTP 0
 > 
 ```
 
-> [!IMPORTANT] Connections are exclusively single-client. New connections will kick the existing client! (Last-one-wins)
+> [!IMPORTANT]
+> Connections are exclusively single-client. New connections will kick the existing client! (Last-one-wins)
 
 ### Receiving Data
 
